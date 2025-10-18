@@ -246,13 +246,14 @@ statystyki <- function(x){
   rozstep = maksimum - minimum
   
   ##liczenie kwartylu dolnego
-  kwantyl_d <- quantile(x, 0.25)
+  kwar
+tyl_d <- quantile(x, 0.25)
   
   ##liczenie kwartylu górnego
-  kwantyl_g <- quantile(x, 0.75)
+  kwartyl_g <- quantile(x, 0.75)
   
   ## zwracanie odpowiedzi
-  wyn <- c(srednia, mediana, odch, minimum, maksimum, rozstep, kwantyl_d, kwantyl_g)
+  wyn <- c(srednia, mediana, odch, minimum, maksimum, rozstep, kwartyl_d, kwartyl_g)
   return(wyn)
 }
 ```
@@ -311,7 +312,7 @@ for (i in 1:2) {
 
 tabela1 <- xtable(wyniki1_df, digits=5, caption='Teoretyczne podstawowe statystyki opisowe', label='tab_2') 
 
-colnames(tabela1) <- c("mediana", "kwantyl dolny", "kwantyl górny")
+colnames(tabela1) <- c("mediana", "kwartyl dolny", "kwartyl górny")
 
 rownames(tabela1) <- c('dane_1','dane_2')
 
@@ -323,6 +324,7 @@ Gdzie:
 **dane_1** oznaczają teoretyczne wartości statystyk opisowych dla danych wygenerowanych z rozkładu *WE($\alpha=2, \beta=2, \gamma$=0.2)*.    
 **dane_2** oznaczają teoretyczne wartości statystyk opisowych dla danych wygenerowanych z rozkładu *WE($\alpha=0.5, \beta=1, \gamma$=1)*.
 
-Jak możemy zauważyć, wartości teoretyczne mediany oraz kwantyli dolnego i górnego odbiegają od wyników przedstawionych w Tabeli 1. Są one zbliżone, jednak nie pokrywają się dokładnie. Dla parametrów $\alpha=2$, $\beta=2$, $\gamma=0.2$, wartości kwantyli dolnego i górnego wraz ze wzrostem liczebności próby ($n$) zbliżają się do wartości teoretycznych, jednak mediana znacząco od nich odbiega. Możemy to rozumieć, jako fakt, że mediana może być bardziej wrażliwa na zmienność próby niż kwantyle w przypadku tych parametrów.
+Jak możemy zauważyć, wartości teoretyczne mediany oraz kwartyli dolnego i górnego odbiegają od wyników przedstawionych w Tabeli 1. Są one zbliżone, jednak nie pokrywają się dokładnie. Dla parametrów $\alpha=2$, $\beta=2$, $\gamma=0.2$, wartości kwartyli dolnego i górnego wraz ze wzrostem liczebności próby ($n$) zbliżają się do wartości teoretycznych, jednak mediana znacząco od nich odbiega. Możemy to rozumieć, jako fakt, że mediana może być bardziej wrażliwa na zmienność próby niż kwartyle w przypadku tych parametrów.
+
 
 Dla parametrów $\alpha=0.5$, $\beta=1$, $\gamma=1$, wartości statystyk obliczonych z próby są bliskie wartościom teoretycznym dla $n=50$. Przy większych liczebnościach próby różnice te się zwiększają. Dla tych parametrów powiększanie próby nie gwarantuje lepszego dopasowania mediany do wartości teoretycznej.
