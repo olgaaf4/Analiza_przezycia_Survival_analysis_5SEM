@@ -148,7 +148,7 @@ wyniki <- rbind(
 tabela <- xtable(wyniki, digits=5, caption='Statystyki opisowe', label='tab_3') 
 colnames(tabela) <- c('dane','min','dolny_kwartyl','gorny_kwartyl','mediana','maks', 'rozstep','liczba cenz','odsetek')
 
-print(tabela, type='latex', table.placement='H', caption.placement='top', include.rownames=FALSE,  comment = FALSE)
+print(tabela, type='latex', table.placement='H', caption.placement='bottom', include.rownames=FALSE,  comment = FALSE)
 
 ```
 
@@ -196,9 +196,10 @@ wyniki <- rbind(
 tabela <- xtable(wyniki, digits=5, caption='Statystyki opisowe', label='tab_4') 
 colnames(tabela) <- c('dane','min','dolny_kwartyl','gorny_kwartyl','mediana','maks', 'rozstep','liczba cenz','odsetek')
 
-print(tabela, caption.placement='top',table.placement='H',include.rownames=FALSE,  comment = FALSE)
+print(tabela, caption.placement='bottom',table.placement='H',include.rownames=FALSE,  comment = FALSE)
 
 ```
 
 W przypadku obu grup odsetek danych cenzurowanych jest taki sam - w zestawach A i B występuje po 10 obserwacji cenzurowanych oraz 10 niecenzurowanych. Patrząc na wartości minimalne, można zauważyć, że czas do osiągnięcia remisji w grupie A był nieznacznie krótszy niż w grupie B. Dane cenzurowane mają wartość $t_0$ = 1, ponieważ obserwacja trwała przez rok, dlatego w obu przypadkach maksimum jest jednakowe i równe 1. Mediana w grupie A wynosi 0,97, a w grupie B – 0,85. Dolne kwartyle dla grup A i B wynoszą odpowiednio 0,38 i 0,33, natomiast górny kwartyl w obu przypadkach wynosi 1. Wyniki te można interpretować w ten sposób, że choć minimalny czas wystąpienia remisji był krótszy w grupie A, to większa liczba pacjentów osiągnęła remisję szybciej w grupie B. Można więc wnioskować, że mimo szybszych początkowych efektów leku w grupie A, ostatecznie lek B okazał się skuteczniejszy.
+
 
