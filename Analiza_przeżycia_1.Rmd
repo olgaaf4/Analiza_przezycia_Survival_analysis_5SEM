@@ -282,7 +282,7 @@ colnames(tabela) <- c("średnia", "mediana", "odch_stand","min", "maks","rozstę
 
 rownames(tabela) <- c('dane_1.1','dane_1.2','dane_2.1','dane_2.2')
 
-print(tabela, type='latex', table.placement='H', caption.placement='top', include.rownames=TRUE)
+print(tabela, type='latex', table.placement='H', caption.placement='bottom', include.rownames=TRUE)
 
 ```
 
@@ -316,7 +316,7 @@ colnames(tabela1) <- c("mediana", "kwartyl dolny", "kwartyl górny")
 
 rownames(tabela1) <- c('dane_1','dane_2')
 
-print(tabela1, type='latex', table.placement='H', caption.placement='top', include.rownames=TRUE)
+print(tabela1, type='latex', table.placement='H', caption.placement='bottom', include.rownames=TRUE)
 
 ```
 
@@ -328,3 +328,4 @@ Jak możemy zauważyć, wartości teoretyczne mediany oraz kwartyli dolnego i g�
 
 
 Dla parametrów $\alpha=0.5$, $\beta=1$, $\gamma=1$, wartości statystyk obliczonych z próby są bliskie wartościom teoretycznym dla $n=50$. Przy większych liczebnościach próby różnice te się zwiększają. Dla tych parametrów powiększanie próby nie gwarantuje lepszego dopasowania mediany do wartości teoretycznej.
+
