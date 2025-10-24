@@ -1,0 +1,66 @@
+---
+title: "Lista_3"
+author: "Olga Foriasz"
+date: "2025-10-15"
+output:
+  pdf_document: default
+  html_document: default
+header-includes:
+- \usepackage[OT4]{polski}
+- \usepackage[utf8]{inputenc}
+- \usepackage{graphicx}
+- \usepackage{float}
+subtitle: Analiza przeżycia
+fontsize: 11pt
+---
+# LISTA 3
+
+## Zadanie 1
+
+```{r, echo=TRUE}
+## dane z zad.3 listy 2
+R=10
+n=20
+t0=1
+delta=numeric(n)
+grupa_A <- numeric(n)
+grupa_B <- numeric(n)
+
+grupa_A[1:10] <- c(0.03345514, 0.08656403, 0.08799947, 0.24385821, 0.27755032,
+0.40787247, 0.58825664, 0.64125620, 0.90679161, 0.94222208)
+
+grupa_B[1:10] <- c(0.03788958, 0.12207257, 0.20319983, 0.24474299, 0.30492413,
+0.34224462, 0.42950144, 0.44484582, 0.63805066, 0.69119721)
+
+## cenzurowanie I-go typu
+
+grupa_A[11:20] <- t0
+grupa_B[11:20] <- t0
+
+delta_A <- c(rep(1, 10), rep(0, 10))
+delta_B <- c(rep(1, 10), rep(0, 10))
+
+dane_A <- data.frame(czas = grupa_A, delta = delta_A)
+dane_B <- data.frame(czas = grupa_B, delta = delta_B)
+
+library(binom)
+
+## dla alfy = 0.05
+alfa=0.05
+T.L <- binom.confint(R,n,conf.level=1-alfa, methods="exact")$lower
+T.U <- binom.confint(R,n,conf.level=1-alfa, methods = "exact")$upper
+
+TL1= (-log(1-T.L))/t0
+TU1= (-log(1-T.U))/t0
+
+## dla alfy = 0.01
+alfa=0.01
+T.L <- binom.confint(R,n,conf.level=1-alfa, methods="exact")$lower
+T.U <- binom.confint(R,n,conf.level=1-alfa, methods = "exact")$upper
+
+TL2= (-log(1-T.L))/t0
+TU2= (-log(1-T.U))/t0
+
+
+```
+Realizacją przedziału ufności dla $\alpha$ = 0.05 jest przedział [$T_L, T_U$] =[\ref{TL1},\ref{TU1}], natomiast dla $\alpha$ = 0.01 przedział [$T_L, T_U$] =[\ref{TL2},\ref{TU2}]
