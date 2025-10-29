@@ -15,9 +15,9 @@ fontsize: 11pt
 ---
 # LISTA 3
 
-## Zadanie 1b
+## Zadanie 1a
 
-Wyznaczamy realizację przedziału ufności na poziomie 1-$\alpha$ dla średniego czasu do remisji choroby osobno dla pacjentów leczonych lekiem A oraz lekiem B (dane z listy 2. z zadania 3.) Zakładamy, że są to zmienne z rozkładu wykładniczego. Za $\alpha$ przyjmujemy kolejno $\alpha$=0.05 oraz $\alpha$=0.01.
+Dane bierzeny z zadania 3 z litsy 2. Wyznaczymy oszacowania największej wiarogodności średniego czasu do remisji choroby dla pacjentów leczonych lekiem A oraz pacjentów leczonych lekiem B. 
 
 ```{r,echo=FALSE, warning=FALSE}
 ## dane z zad.3 listy 2
@@ -45,6 +45,23 @@ delta_B <- c(rep(1, 10), rep(0, 10))
 dane_A <- data.frame(czas = grupa_A, delta = delta_A)
 dane_B <- data.frame(czas = grupa_B, delta = delta_B)
 ```
+
+```{r}
+T_a = sum(grupa_A[1:10]) + t0*(n-R)
+T_b = sum(grupa_B[1:10]) + t0*(n-R) 
+
+theta_a <- R/T_a
+theta_b <- R/T_b
+```
+
+Średni czas do remisji dla leku A wynosi: `r theta_a`, natomiast dla leku B: `r theta_b`
+
+
+## Zadanie 1b
+
+Wyznaczamy realizację przedziału ufności na poziomie 1-$\alpha$ dla średniego czasu do remisji choroby osobno dla pacjentów leczonych lekiem A oraz lekiem B (dane z listy 2. z zadania 3.) Zakładamy, że są to zmienne z rozkładu wykładniczego. Za $\alpha$ przyjmujemy kolejno $\alpha$=0.05 oraz $\alpha$=0.01.
+
+
 
 ```{r, echo=TRUE, warning=FALSE}
 library(binom)
