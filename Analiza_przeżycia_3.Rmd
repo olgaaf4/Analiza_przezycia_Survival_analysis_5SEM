@@ -15,7 +15,7 @@ fontsize: 11pt
 ---
 # LISTA 3
 
-## Zadanie 1a
+## Zadanie 1a - Oszacowania największej wiarygodności
 
 Dane bierzeny z zadania 3 z litsy 2. Wyznaczymy oszacowania największej wiarogodności średniego czasu do remisji choroby dla pacjentów leczonych lekiem A oraz pacjentów leczonych lekiem B. 
 
@@ -57,7 +57,7 @@ theta_b <- R/T_b
 Średni czas do remisji dla leku A wynosi: `r theta_a`, natomiast dla leku B: `r theta_b`
 
 
-## Zadanie 1b
+## Zadanie 1b - Realizacje przedziału ufności
 
 Wyznaczamy realizację przedziału ufności na poziomie 1-$\alpha$ dla średniego czasu do remisji choroby osobno dla pacjentów leczonych lekiem A oraz lekiem B (dane z listy 2. z zadania 3.) Zakładamy, że są to zmienne z rozkładu wykładniczego. Za $\alpha$ przyjmujemy kolejno $\alpha$=0.05 oraz $\alpha$=0.01.
 
@@ -89,7 +89,7 @@ TU2 = round(TU2,2)
 ```
 Realizacją przedziału ufności dla $\alpha$ = 0.05 jest przedział [$T_L, T_U$] =[`r TL1`, `r TU1`], natomiast dla $\alpha$ = 0.01 przedział [$T_L, T_U$] =[`r TL2`, `r TU2`]
 
-## Zadanie 2
+## Zadanie 2 - Oszacowania największej wiarygodności i realizacja przedziału ufności dla danych z listy 2. zad.3
 
 ```{r,echo=FALSE, warning=FALSE}
 ##dane cenzurowane II-go typu
@@ -168,3 +168,4 @@ TUb <- round((m*qm_b2)/Tb,2)
 
 Stąd otrzymujemy, że realizacjami przedziałów ufności dla grupy A jest przedział [`r TLa`, `r TUa`] a dla grupy B: [`r TLb`, `r TUb`].
 
+# Zadanie 3 - porównanie estymatorów
