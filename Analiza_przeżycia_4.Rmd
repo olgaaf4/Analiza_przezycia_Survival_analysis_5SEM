@@ -33,7 +33,7 @@ generowanie_1 <- function(n,lambda){
   return(dane)
 }
 
-generowanie_1(10,1/2)
+##generowanie_1(10,1/2)
 ```
 
 Następnie piszemy funkcję wyliczającą funkcję wiarygodności:
@@ -78,6 +78,9 @@ IW <- function(x,t0,r,theta0,type){
 
 ## Zadanie 3
 
+Zakładamy, że $\alpha$=0.05.
+Korzystając z wcześniej napisanej funkcji IW, liczymy p-value dla danych pochodzących z listy 2. z zadania 3. Weryfikujemy hipotezę, że średni czas do remisji w grupie A i B wynosi 1.
+
 ```{r, warning=FALSE, echo=FALSE}
 ## dane z zad.3 listy 2
 #R=10
@@ -106,9 +109,10 @@ dane_B <- data.frame(czas = grupa_B, delta = delta_B)
 ```
 
 ```{r}
-IW(dane_A,1,10,1,"two.sided")
-IW(dane_B,1,10,1,"two.sided")
+p1 <- round(IW(dane_A,1,10,1,"two.sided"),2)
+p2 <- round(IW(dane_B,1,10,1,"two.sided"),2)
 ```
 
+Otrzymaliśmy wyniki p=`r p1` dla grupy A oraz p=`r p2` dla grupy B. Przy założeniu ustalonej $\alpha$ p>0.05 dla obu przypadków. Zatem nie ma podstaw do odrzucenia hipotezy ani w grupie A, ani w grupie B.
 
 
