@@ -169,10 +169,10 @@ TUb <- round((m*qm_b2)/Tb,2)
 Stąd otrzymujemy, że realizacjami przedziałów ufności dla grupy A jest przedział [`r TLa`, `r TUa`] a dla grupy B: [`r TLb`, `r TUb`]
 
 
-Realizacją przedziału ufności dla $\alpha$ = 0.05 jest przedział [$T_L, T_U$] =[\ref{TL1},\ref{TU1}], natomiast dla $\alpha$ = 0.01 przedział [$T_L, T_U$] =[\ref{TL2},\ref{TU2}]
+Realizacją przedziału ufności dla $\alpha$ = 0.05 jest przedział [$T_L, T_U$] =[`r TL1`,`r TU1`], natomiast dla $\alpha$ = 0.01 przedział [$T_L, T_U$] =[`r TL2`,`r TU2`]
 
 
-## Zadanie 3 
+## Zadanie 3 - Porównanie dokładności estymatorów
 
 Przeprowadzono symulację w celu porównania dwóch estymatorów parametru $\vartheta$ rozkładu wykładniczego przy danych cenzurowanych I-go typu:
 
