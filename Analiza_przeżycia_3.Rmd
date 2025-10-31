@@ -166,6 +166,109 @@ TUb <- round((m*qm_b2)/T2_b,2)
 
 Stąd otrzymujemy, że realizacjami przedziałów ufności dla grupy A jest przedział [`r TLa`, `r TUa`] a dla grupy B: [`r TLb`, `r TUb`]
 
-```
+
 Realizacją przedziału ufności dla $\alpha$ = 0.05 jest przedział [$T_L, T_U$] =[\ref{TL1},\ref{TU1}], natomiast dla $\alpha$ = 0.01 przedział [$T_L, T_U$] =[\ref{TL2},\ref{TU2}]
+
+
+## Zadanie 3 
+
+Przeprowadzono symulację w celu porównania dwóch estymatorów parametru $\vartheta$ rozkładu wykładniczego przy danych cenzurowanych I-go typu:
+
+\begin{equation}
+\hat{\vartheta} = \frac{R}{T_1}
+\end{equation}
+
+\begin{equation}
+\tilde{\vartheta} = -\frac{\log(1 - R/n)}{t_0}
+\end{equation}
+
+gdzie $R = \sum_{i=1}^n 1(X_i \le t_0)$ oraz $T_1 = \sum_{i=1}^R X_i + t_0(n - R)$.
+
+Symulację wykonano dla $\vartheta = 1$, liczności prób $n = 10, 30$ oraz czasów obserwacji $t_0 = 0.5, 1, 2$, powtarzając eksperyment $M = 10{,}000$ razy.
+Dla każdego przypadku obliczono obciążenie (Bias) oraz błąd średniokwadratowy (MSE) obu estymatorów.
+
+```{r , echo=FALSE}
+library(knitr)
+
+typ_I <- function(t0,theta,n){
+  X<-numeric(n)
+  delta <-numeric(n)
+  check <- 0
+  
+  while (check == 0){
+    X<-numeric(n)
+    delta <-numeric(n)
+    X=rexp(n, 1/theta)
+    X <- sort(X)
+    for(i in 1:n){
+      if(X[i]>t0){
+        X[i] <- t0
+        delta[i] <- 0
+        check <- 1
+      }else{delta[i]<-1}}
+  }
+  return(data.frame(X = X, delta = delta))
+  X <- sort(X)
+}
+symulacja <- function(theta,n,t0,M){
+  est1 <- numeric(M)
+  est2 <- numeric(M)
+  for (i in (1:M)){
+    dane <- typ_I(t0,theta,n)
+    R <- sum(dane$delta)
+    T1 <- sum(dane$X)
+    est1[i] <- R/T1
+    est2[i] <- -log(1-R/n)/t0
+  }
+  bias1 <- est1-theta
+  bias2 <- est2-theta
+  mse1 <- bias1^2
+  mse2 <- bias2^2
+  bias_c1 <- mean(bias1)
+  bias_c2 <- mean(bias2)
+  mse_c1 <- mean(mse1)
+  mse_c2 <- mean(mse2)
+  return(c(bias_c1, bias_c2, mse_c1, mse_c2))
+}
+#symulacja(1,10,1,10000)
+
+
+n_list <- c(10,30)
+t0_list <- c(0.5,1,2)
+wyniki <- list(6)
+i <- 1
+for (n in n_list){
+  for (t0 in t0_list){
+    wyniki[[i]] <- symulacja(1,n,t0,10000)
+    i = i+1
+  }
+}
+
+wyniki_df <- data.frame(
+  n = rep(n_list, each = length(t0_list)),
+  t0 = rep(t0_list, times = length(n_list)),
+  Bias_Est1 = round(sapply(wyniki, function(x) x[1]), 4),
+  Bias_Est2 = round(sapply(wyniki, function(x) x[2]), 4),
+  MSE_Est1 = round(sapply(wyniki, function(x) x[3]), 4),
+  MSE_Est2 = round(sapply(wyniki, function(x) x[4]), 4)
+)
+
+kable(wyniki_df, 
+      booktabs = TRUE,
+      col.names = c(
+        "n", 
+        "$t_0$", 
+        "Bias $\\hat{\\vartheta}$", 
+        "Bias $\\tilde{\\vartheta}$", 
+        "MSE $\\hat{\\vartheta}$", 
+        "MSE $\\tilde{\\vartheta}$"),
+      caption = "Wyniki symulacji dla różnych wartości n i t0")
+```
+
+Z przeprowadzonej analizy wynika, że wraz ze wzrostem liczności próby $n$ obciążenie i MSE obu estymatorów maleją, co potwierdza ich zgodność.
+Większe wartości $t_0$ (czyli mniejsze cenzurowanie) prowadzą do dokładniejszych oszacowań.
+W większości przypadków estymator $\hat{\vartheta} = \frac{R}{T_1}$ charakteryzuje się mniejszym błędem średniokwadratowym, co wskazuje na jego większą efektywność w porównaniu z estymatorem $\tilde{\vartheta} = \frac{-\log(1 - R/n)}{t_0}$.
+
+
+
 
