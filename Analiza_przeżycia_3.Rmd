@@ -15,7 +15,7 @@ fontsize: 11pt
 ---
 # LISTA 3
 
-## Zadanie 1a
+## Zadanie 1a - Oszacowania największej wiarygodności
 
 Dane bierzeny z zadania 3 z litsy 2. Wyznaczymy oszacowania największej wiarogodności średniego czasu do remisji choroby dla pacjentów leczonych lekiem A oraz pacjentów leczonych lekiem B. 
 
@@ -57,7 +57,7 @@ theta_b <- R/T_b
 Średni czas do remisji dla leku A wynosi: `r theta_a`, natomiast dla leku B: `r theta_b`
 
 
-## Zadanie 1b
+## Zadanie 1b - Realizacje przedziału ufności
 
 Wyznaczamy realizację przedziału ufności na poziomie 1-$\alpha$ dla średniego czasu do remisji choroby osobno dla pacjentów leczonych lekiem A oraz lekiem B (dane z listy 2. z zadania 3.) Zakładamy, że są to zmienne z rozkładu wykładniczego. Za $\alpha$ przyjmujemy kolejno $\alpha$=0.05 oraz $\alpha$=0.01.
 
@@ -89,13 +89,13 @@ TU2 = round(TU2,2)
 ```
 Realizacją przedziału ufności dla $\alpha$ = 0.05 jest przedział [$T_L, T_U$] =[`r TL1`, `r TU1`], natomiast dla $\alpha$ = 0.01 przedział [$T_L, T_U$] =[`r TL2`, `r TU2`]
 
-## Zadanie 2
+## Zadanie 2 - Oszacowania największej wiarygodności i realizacja przedziału ufności dla danych z listy 2. zad.3
 
 ```{r,echo=FALSE, warning=FALSE}
 ##dane cenzurowane II-go typu
 R=10
 m=10
-n=10
+n=20
 delta=numeric(n)
 grupa_A <- numeric(n)
 grupa_B <- numeric(n)
@@ -121,47 +121,49 @@ momentu, w którym u dziesięciu pacjentów zostanie ona zaobserwowana. Dla taki
 
 ```{r,echo=TRUE, warning=FALSE}
 m=10
-n=10
-T2_a <- round(m/(sum(grupa_A)+(n-m)*grupa_A[m]),2)
-T2_b <- round(m/(sum(grupa_B)+(n-m)*grupa_B[m]),2)
+n=20
+theta_a <- round(m/(sum(grupa_A[1:m])+(n-m)*grupa_A[m]),2)
+theta_b <- round(m/(sum(grupa_B[1:m])+(n-m)*grupa_B[m]),2)
 ```   
 
-Zatem z wyliczeń wynika, że oszacowania największej wiarygodności średniego czasu do remisji w grupie A wynoszą: `r T2_a`  a w grupie B: `r T2_b`.
+Zatem z wyliczeń wynika, że oszacowania największej wiarygodności średniego czasu do remisji w grupie A wynoszą: `r theta_a`  a w grupie B: `r theta_b`.
 
 Następnie dla danych wyznaczamy realizację przedziału ufności na poziomie 1-$\alpha$, dla odpowiednio dwóch wartości $\alpha$: 0.05 i 0.01. 
 
 ```{r,echo=TRUE, warning=FALSE}
 m=10
-n=10
+n=20
+Ta<-sum(grupa_A[1:m])+(n-m)*grupa_A[m]
+Tb<-sum(grupa_B[1:m])+(n-m)*grupa_B[m]
 ## dla alfy = 0.05
 alfa=0.05
-qm_a1 = qgamma(alfa/2,m,m)
-TLa <- round((m*qm_a1)/T2_a,2)
-qm_a2 = qgamma((1-alfa/2),m,m)
-TUa <-round((m*qm_a2)/T2_a,2)
+qm_a1 = qgamma(alfa/2,m,rate=m)
+TLa <- round((m*qm_a1)/Ta,2)
+qm_a2 = qgamma((1-alfa/2),m,rate=m)
+TUa <-round((m*qm_a2)/Ta,2)
 
-qm_b1 = qgamma(alfa/2,m,m)
-round(TLb <- (m*qm_a1)/T2_b,2)
-qm_b2 = qgamma((1-alfa/2),m,m)
-TUb <-round((m*qm_b2)/T2_b,2)
+qm_b1 = qgamma(alfa/2,m,rate=m)
+TLb <- round((m*qm_b1)/Tb,2)
+qm_b2 = qgamma((1-alfa/2),m,rate=m)
+TUb <-round((m*qm_b2)/Tb,2)
 ```
-Dla $\alpha$=0.05 realizacjami przedziałów ufności dla grupy A jest przedział [`r TLa`, `r TUa`] a dla grupy B: [`r TLb`, `r TUb`]. Szerokość przedziałów wynika z niewielkiej liczebności próby danych.
+Dla $\alpha$=0.05 realizacjami przedziałów ufności dla grupy A jest przedział [`r TLa`, `r TUa`] a dla grupy B: [`r TLb`, `r TUb`].
 
 Następnie wyznaczamy realizację przedziału ufności dla $\alpha$=0.01:
 ```{r,echo=TRUE, warning=FALSE}
 m=10
-n=10
+n=20
 ## dla alfy = 0.01
 alfa=0.01
 qm_a1 = qgamma(alfa/2,m,m)
-TLa <- round((m*qm_a1)/T2_a,2)
+TLa <- round((m*qm_a1)/Ta,2)
 qm_a2 = qgamma((1-alfa/2),m,m)
-TUa <-round((m*qm_a2)/T2_a,2)
+TUa <-round((m*qm_a2)/Ta,2)
 
 qm_b1 = qgamma(alfa/2,m,m)
-TLb <- round((m*qm_a1)/T2_b,2)
+TLb <- round((m*qm_a1)/Tb,2)
 qm_b2 = qgamma((1-alfa/2),m,m)
-TUb <- round((m*qm_b2)/T2_b,2)
+TUb <- round((m*qm_b2)/Tb,2)
 ```  
 
 Stąd otrzymujemy, że realizacjami przedziałów ufności dla grupy A jest przedział [`r TLa`, `r TUa`] a dla grupy B: [`r TLb`, `r TUb`]
@@ -268,7 +270,5 @@ kable(wyniki_df,
 Z przeprowadzonej analizy wynika, że wraz ze wzrostem liczności próby $n$ obciążenie i MSE obu estymatorów maleją, co potwierdza ich zgodność.
 Większe wartości $t_0$ (czyli mniejsze cenzurowanie) prowadzą do dokładniejszych oszacowań.
 W większości przypadków estymator $\hat{\vartheta} = \frac{R}{T_1}$ charakteryzuje się mniejszym błędem średniokwadratowym, co wskazuje na jego większą efektywność w porównaniu z estymatorem $\tilde{\vartheta} = \frac{-\log(1 - R/n)}{t_0}$.
-
-
 
 
