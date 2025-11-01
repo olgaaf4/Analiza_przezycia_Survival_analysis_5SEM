@@ -76,6 +76,95 @@ IW <- function(x,t0,r,theta0,type){
 }
 ```
 
+## Zadanie 2 
+
+W tym zadaniu przeprowadzono symulacje mające na celu oszacowanie mocy testu ilorazu wiarygodności oraz jego rozmiaru dla wybranych wartości parametrów.
+
+Założono, że badane dane pochodzą z rozkładu wykładniczego, a cenzurowanie jest typu I przy ustalonym czasie `t₀ = 0.5`. Hipoteza zerowa dotyczyła wartości parametru ϑ₀ = 3, natomiast alternatywy — dziesięć różnych wartości parametru ϑ ∈ {0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5}. Dla każdej z tych wartości przeprowadzono M = 1000 replikacji testu.
+
+Symulacje wykonano dla dwóch liczebności prób: n = 20 oraz n = 50.  
+Na podstawie otrzymanych wartości p-value wyznaczono estymator mocy testu (dla ϑ ≠ ϑ₀) oraz rozmiaru testu (dla ϑ = ϑ₀).
+
+Na wykresie poniżej przedstawiono krzywe mocy testu dla obu wielkości prób.  
+Dodatkowo zaznaczono:
+- przerywaną linię poziomą odpowiadającą poziomowi istotności α = 0.05,  
+- przerywaną linię pionową dla ϑ₀ = 3
+
+```{r , echo=FALSE}
+set.seed(666)
+library(ggplot2)
+typ_I <- function(t0,theta,n){
+  X<-numeric(n)
+  delta <-numeric(n)
+  check <- 0
+  
+  while (check == 0){
+    X<-numeric(n)
+    delta <-numeric(n)
+    X=rexp(n, theta)
+    X <- sort(X)
+    for(i in 1:n){
+      if(X[i]>t0){
+        X[i] <- t0
+        delta[i] <- 0
+        check <- 1
+      }else{delta[i]<-1}}
+  }
+  czas <- sort(X)
+  return(data.frame(czas = czas, delta = delta))
+}
+symulacja_moc <- function(theta,theta0,n,t0,alpha = 0.05,M=1000){
+  count <- 0 
+  for (i in (1:M)){
+    x <- typ_I(t0,theta,n)
+    r <- sum(x$delta)
+    pv <- IW(x,t0,r,theta0,"two.sided")
+    if (pv<= alpha){
+      count = count +1
+    }
+  }
+  return(count/M)
+}
+theta0 <- 3 
+theta_list <- c(0.5,1,1.5,2,2.5,3,3.5,4,4.5,5,5.5)
+n20 <- numeric(length(theta_list))
+n50 <- numeric(length(theta_list))
+for (i in 1:length(theta_list)){
+  n20[i] <- symulacja_moc(theta_list[i],theta0,20,0.5)
+  n50[i] <- symulacja_moc(theta_list[i],theta0,50,0.5)
+}
+  
+
+df <- data.frame(
+  theta = rep(theta_list, 2),
+  moc = c(n20, n50),
+  n = factor(rep(c(20, 50), each=length(theta_list)))
+)
+
+ggplot(df, aes(x=theta, y=moc, color=n, shape=n)) +
+  geom_line(linewidth=1) +
+  geom_point(size=3) +
+  geom_hline(yintercept=0.05, linetype="dashed", color="gray40") +
+  geom_vline(xintercept=theta0, linetype="dashed", color="gray40") +
+  annotate("text", x=max(theta_list)-0.3, y=0.1, label='alpha=0.05',
+           color="gray30", size=4, hjust=1) +
+  annotate("text", x=theta0+0.4, y=0.9, label='theta_0 = 3',
+           color="gray30", size=4, angle=90, vjust=-0.5) +
+  scale_color_manual(values=c("blue", "red")) +
+  labs(title="Krzywe mocy testu ilorazu wiarygodności",
+       x=expression(theta), y="Moc testu",
+       color="Wielkość próby", shape="Wielkość próby") +
+  theme_minimal(base_size=14)
+
+rozmiar_20 <- symulacja_moc(theta0,theta0,20,0.5,0.05, M=1000)
+rozmiar_50 <- symulacja_moc(theta0,theta0,50,0.5,0.05, M=1000)
+
+
+```
+Można zaobserwować, że wraz z oddalaniem się od naszego $\theta_0$ moc testu rośnie, a dla $\theta = \theta_0$ empiryczny rozmiar testu jest zbliżony do nominalnego poziomu $\alpha$ i wynosi dla $n = 20$: `r rozmiar20` oraz dla $n = 50$: `r rozmiar50`. Dodatkowo możemy zauważyć, że wraz ze wzrostem liczebności próby moc testu również rośnie rośnie.
+
+
+
 ## Zadanie 3
 
 ```{r, warning=FALSE, echo=FALSE}
