@@ -80,15 +80,15 @@ IW <- function(x,t0,r,theta0,type){
 
 W tym zadaniu przeprowadzono symulacje mające na celu oszacowanie mocy testu ilorazu wiarygodności oraz jego rozmiaru dla wybranych wartości parametrów.
 
-Założono, że badane dane pochodzą z rozkładu wykładniczego, a cenzurowanie jest typu I przy ustalonym czasie `t₀ = 0.5`. Hipoteza zerowa dotyczyła wartości parametru ϑ₀ = 3, natomiast alternatywy — dziesięć różnych wartości parametru ϑ ∈ {0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5}. Dla każdej z tych wartości przeprowadzono M = 1000 replikacji testu.
+Założono, że badane dane pochodzą z rozkładu wykładniczego, a cenzurowanie jest typu I przy ustalonym czasie `t_0 = 0.5`. Hipoteza zerowa dotyczyła wartości parametru $\theta_0 = 3$, natomiast alternatywy — dziesięć różnych wartości parametru $\theta$: 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5. Dla każdej z tych wartości przeprowadzono $M = 1000$ replikacji testu.
 
-Symulacje wykonano dla dwóch liczebności prób: n = 20 oraz n = 50.  
-Na podstawie otrzymanych wartości p-value wyznaczono estymator mocy testu (dla ϑ ≠ ϑ₀) oraz rozmiaru testu (dla ϑ = ϑ₀).
+Symulacje wykonano dla dwóch liczebności prób: $n = 20$ oraz $n = 50$.  
+Na podstawie otrzymanych wartości p-value wyznaczono estymator mocy testu  oraz rozmiaru testu.
 
 Na wykresie poniżej przedstawiono krzywe mocy testu dla obu wielkości prób.  
 Dodatkowo zaznaczono:
-- przerywaną linię poziomą odpowiadającą poziomowi istotności α = 0.05,  
-- przerywaną linię pionową dla ϑ₀ = 3
+- przerywaną linię poziomą odpowiadającą poziomowi istotności $\alpha = 0.05$,  
+- przerywaną linię pionową dla $\theta_0 = 3$
 
 ```{r , echo=FALSE}
 set.seed(666)
@@ -152,7 +152,7 @@ ggplot(df, aes(x=theta, y=moc, color=n, shape=n)) +
            color="gray30", size=4, angle=90, vjust=-0.5) +
   scale_color_manual(values=c("blue", "red")) +
   labs(title="Krzywe mocy testu ilorazu wiarygodności",
-       x=expression(theta), y="Moc testu",
+       x='theta', y="Moc testu",
        color="Wielkość próby", shape="Wielkość próby") +
   theme_minimal(base_size=14)
 
@@ -161,9 +161,8 @@ rozmiar_50 <- symulacja_moc(theta0,theta0,50,0.5,0.05, M=1000)
 
 
 ```
-Można zaobserwować, że wraz z oddalaniem się od naszego $\theta_0$ moc testu rośnie, a dla $\theta = \theta_0$ empiryczny rozmiar testu jest zbliżony do nominalnego poziomu $\alpha$ i wynosi dla $n = 20$: `r rozmiar20` oraz dla $n = 50$: `r rozmiar50`. Dodatkowo możemy zauważyć, że wraz ze wzrostem liczebności próby moc testu również rośnie rośnie.
 
-
+Można zaobserwować, że wraz z oddalaniem się od naszego $\theta_0$ moc testu rośnie, a dla $\theta = \theta_0$ empiryczny rozmiar testu jest zbliżony do nominalnego poziomu $\alpha$ i wynosi dla $n = 20$: `r rozmiar_20` oraz dla $n = 50$: `r rozmiar_50`. Dodatkowo możemy zauważyć, że wraz ze wzrostem liczebności próby moc testu również rośnie.
 
 ## Zadanie 3
 
@@ -173,7 +172,7 @@ Korzystając z wcześniej napisanej funkcji IW, liczymy p-value dla danych pocho
 ```{r, warning=FALSE, echo=FALSE}
 ## dane z zad.3 listy 2
 #R=10
-#n=20
+n=20
 t0=1
 delta=numeric(n)
 grupa_A <- numeric(n)
