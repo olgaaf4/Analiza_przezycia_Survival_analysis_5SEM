@@ -1,0 +1,331 @@
+---
+title: "Sprawozdanie I"
+author: "Olga Foriasz"
+date: "2025-10-08"
+output:
+  pdf_document:
+    toc: true
+    fig_caption: true
+    fig_width: 5
+    fig_height: 4
+    number_sections: true
+header-includes:
+- \usepackage[OT4]{polski}
+- \usepackage[utf8]{inputenc}
+- \usepackage{graphicx}
+- \usepackage{float}
+subtitle: Analiza przeżycia
+fontsize: 12pt
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+```
+
+# LISTA 1
+
+## Zadanie 1 - Deklaracje
+
+Poniżej kolejno deklarowane są funkcje gęstości, dystrybuanty, dystrybuanty odwrotnej (funkcji kwantylowej oraz funkcji hazardu rozkładu *EW($\alpha$, $\beta$, $\gamma$)*)
+
+* Do wyznaczenia gęstości funkcji użyto wzoru:
+
+\begin{equation}
+f(x; \alpha, \beta, \gamma) =
+\frac{\alpha \gamma}{\beta}
+\left( \frac{x}{\beta} \right)^{\alpha - 1}
+\left[ 1 - \exp\left( -\left( \frac{x}{\beta} \right)^{\alpha} \right) \right]^{\gamma - 1}
+\exp\left( -\left( \frac{x}{\beta} \right)^{\alpha} \right).
+\end{equation}
+
+```{r}
+
+gestosc <- function(x, alfa, beta, gamma) {
+  (alfa * gamma / beta) *
+    (x / beta)^(alfa - 1) *
+    (1 - exp(-(x / beta)^alfa))^(gamma - 1) *
+    exp(-(x / beta)^alfa) * (x > 0)
+}
+
+
+```
+
+* Do wyznaczenia dystrybuanty funkcji zastosowano wzór:
+
+\begin{equation}
+F(x,\alpha, \beta, \gamma) = 1 - \exp\left[ -\left( \frac{t}{\beta} \right)^{\alpha} \right]
+\end{equation}
+
+```{r}
+
+dystrybuanta <- function(x, alfa, beta){
+  return((1-exp(- (x/beta)^alfa))^gamma)
+  }
+
+```
+
+* Do wyznaczenia funkcji kwantylowej wzięto wzór: 
+
+\begin{equation}
+Q(p) = \beta * (-ln(1-p^\frac{1}{\gamma}))^\frac{1}{\alpha}
+\end{equation}
+
+```{r}
+
+funkcja_kwantylowa <- function(p, alfa, beta, gamma){
+  return(beta*(-log((1-p^(1/gamma))^(1/alfa))))
+}
+
+```
+
+* Do wyznaczenia funkcji hazardu wykorzystano wzór:
+
+\begin{equation}
+h(x) = \frac{f(x)}{1-F(x)}
+\end{equation}
+
+gdzie f(x) jest funkcją gęstości rozkładu $WE(\alpha, \beta, \gamma)$ oraz F(x) jest dystrybuantą tego rozkładu.
+
+```{r}
+funkcja_hazardu <- function(x, alfa, beta, gamma){
+  return(gestosc(x, alfa, beta, gamma)/(1-dystrybuanta(x, alfa, beta,gamma)))
+}
+```
+
+## Zadanie 2 - Wykresy dla wybranych parametrów rozkładu 
+
+Poniżej przedstawiono na wykresie funkcję hazardu rozkładu $WE(\alpha, \beta, \gamma)$ dla różnych parametrów:
+
+```{r, echo=FALSE, fig.width=10, fig.height=5}
+library(ggplot2)
+
+dystrybuanta <- function(x, alfa, beta,gamma){
+  return((1-exp(-(x/beta)^alfa))^gamma)
+  }
+
+
+gestosc <- function(x, alfa, beta, gamma) {
+  (alfa * gamma / beta) *
+    (x / beta)^(alfa - 1) *
+    (1 - exp(-(x / beta)^alfa))^(gamma - 1) *
+    exp(-(x / beta)^alfa) * (x > 0)
+}
+
+funkcja_hazardu <- function(x, alfa, beta, gamma){
+  return(gestosc(x, alfa, beta, gamma)/(1-dystrybuanta(x, alfa, beta,gamma)))}
+
+x <- seq(0, 10, length.out = 500)
+  
+f1<- funkcja_hazardu(x, 1, 2, 3)
+f2<-funkcja_hazardu(x, 1/2, 1, 1/4)
+f3<-funkcja_hazardu(x, 5, 10, 1/10)
+f4<-funkcja_hazardu(x, 1/4, 1/2, 5)
+
+dane <- as.data.frame(x=x, f1=f1, f2=f2, f3=f3, f4=f4)
+
+ggplot(dane, aes(x=x)) +
+geom_line(aes(y = f1, color = "alfa=1, beta=2, gamma=3")) +
+geom_line(aes(y = f2, color = "alfa=0.5 ,beta=1, gamma=0.25")) +
+geom_line(aes(y = f3, color = "alfa=5, beta=10, gamma=0.1")) +
+geom_line(aes(y = f4, color = "alfa=0.25, beta=0.5, gamma=5")) +
+labs(title = "Wykresy funkcji", x="x", y="f(x)", color = "Parametry rozkładu") +   ylim(0, 2) 
+```
+
+
+Jak możemy zauważyć na wykresie, funkcja hazardu zmienia swoje zachowanie w zależności od przyjętych parametrów. W niektórych przypadkach jest funkcją rosnącą, w innych malejącą. Odpowiedni dobór parametrów pozwala kontrolować tempo wzrostu lub spadku wartości funkcji. Dzięki temu możemy modelować różne typy rozkładów hazardu, od szybko malejących po powoli rosnące, co jest istotne w analizie ryzyka i modelowaniu procesów stochastycznych.
+
+## Zadanie 3 - Program do generowania zmiennych
+
+Do generowania zmiennych z rozkładu $WE(\alpha, \beta, \gamma)$ na poczatku wykorzystujemy funkcje runif generującą liczby z rozkładu jednostajnego na odcinku (0,1). Następnie używając wcześniej zdefiniowanej funkcji kwantylowej (wzór (3)) do wyznaczenia zmiennych z rozkładu $WE(\alpha, \beta, \gamma)$.
+
+```{r, echo=TRUE}
+
+#ile zmiennych chcemy wylosować
+u=10
+
+#losujemy z U(0,1)
+p <- runif(u)
+
+#funkcja kwantylowa
+Q <- function(p, alfa, beta, gamma){
+  return(beta*(-log((1-p^(1/gamma))^(1/alfa))))
+}
+
+#wywołanie funkcji z oarametrami alfa=1, beta=1, gamma=1
+#Q(p,1,1,1)
+
+
+```
+
+## Zadanie 4 - Wykresy dla ustalnoych parametrów i n=50, n=100
+
+Wygenerowane wykresy zostały dla parametrów:
+
+* W pierwszym przypadku: $\alpha$ = 2, $\beta$ = 2 oraz $\gamma$ = 0.2.
+* W drugim przypadku: $\alpha$ = 1.5, $\beta$ = 1 oraz $\gamma$ = 1.
+
+Dla każdej trójki parametrów wykresy wygenerowano dla n= 50 oraz n=100.
+
+```{r, echo=FALSE, fig.width=10, fig.height=5}
+par(mfrow=c(2,2))
+set.seed(123)
+gestosc <- function(x, alfa, beta, gamma) {
+  return((alfa * gamma / beta) *
+    (x / beta)^(alfa - 1) *
+    (1 - exp(-(x / beta)^alfa))^(gamma - 1) *
+    exp(-(x / beta)^alfa) * (x > 0))
+}
+
+Q <- function(p, alfa, beta, gamma){
+  return(beta*((-log(1-p^(1/gamma)))^(1/alfa)))
+}
+
+n <- c(50,100)
+parametry <- list(c(alfa=2,beta=2,gamma=0.2), c(alfa=3/2,beta=1,gamma=1))
+
+x.siatka <- seq(0, 10, length.out = 500)
+
+for(i in parametry){
+  for(j in n){
+  p <- runif(j)
+  dane <- Q(p, i["alfa"], i["beta"], i["gamma"])
+  h <- hist(dane, probability = TRUE, 
+  main = paste0("Rozkład EW: alfa=", i["alfa"], ", beta=", i["beta"], ", gamma=", i["gamma"], ", n=", j),
+  col="lightblue", ylim = c(0,1))
+  lines(x.siatka, gestosc(x.siatka, i["alfa"], i["beta"], i["gamma"]), col="red", lwd=2)
+}}
+```
+Widać, że dla pierwszej trójki parametrów ($\alpha=2, \beta=2, \gamma$=0.2) funkcja gęstości ma charakter „wannowy” ($\alpha$>1,$\alpha\gamma$<1), natomiast dla drugiej trójki parametrów ($\alpha=0.5, \beta=1, \gamma$=1) funkcja gęstości wykazuje rosnącą intensywność ($\alpha$>1,$\alpha\gamma$>=1).
+
+Można również zauważyć wpływ liczności próby na dopasowanie histogramu do funkcji gęstości. Dla większego n, np. n=100, histogram w przybliżeniu odwzorowuje kształt funkcji gęstości, choć nie pokrywa się z nią idealnie. Przy mniejszym n, np. n=50, rozbieżności między histogramem a wykresem gęstości stają się bardziej wyraźne.
+
+## Zadanie 5 - Podstawowe statystyki opisowe 
+
+Wyznaczamy kolejne statystyki takie jak średnia, mediana, odchylenie standardowe, minimum i maksimum, rozstęp, kwartyl dolny i kwartyl górny.
+
+```{r}
+
+x = c(4,5,5,6,7,7)
+
+statystyki <- function(x){
+  ## liczenie sredniej
+  suma <- 0
+  for (el in x){
+    suma <- suma + el
+  }
+  srednia <- suma/length(x)
+  
+  ##liczenie mediany
+  if (length(x)%%2 == 0) {
+   mediana <- (x[length(x)/2]+x[(length(x)/2)+1])/2
+  } else { mediana <- x[floor(length(x)/2) + 1]}
+  
+  ##liczenie odchylenia standardowego
+  suma <- 0
+  for (el in x){
+    suma <- suma + (el-srednia)^2
+  }
+  odch <- (suma/(length(x)-1))^(1/2)
+  
+  ##liczenie minimum
+  minimum <- x[1]
+  for(el in x){
+    if(el < minimum){
+      minimum <- el
+    }}
+  
+  ##liczenie maksimum
+  maksimum <- x[1]
+  for(el in x){
+    if(el > maksimum){
+      maksimum <- el
+    }}
+  
+  ##liczenie rozstępu
+  rozstep = maksimum - minimum
+  
+  ##liczenie kwartylu dolnego
+  kwar
+tyl_d <- quantile(x, 0.25)
+  
+  ##liczenie kwartylu górnego
+  kwartyl_g <- quantile(x, 0.75)
+  
+  ## zwracanie odpowiedzi
+  wyn <- c(srednia, mediana, odch, minimum, maksimum, rozstep, kwartyl_d, kwartyl_g)
+  return(wyn)
+}
+```
+
+```{r, results='asis', comment=FALSE, echo=FALSE}
+library(xtable)
+wyniki=list(c(0,0,0,0,0,0,0,0),c(0,0,0,0,0,0,0,0),c(0,0,0,0,0,0,0,0),c(0,0,0,0,0,0,0,0))
+
+wyniki_df <- as.data.frame(do.call(rbind, wyniki))
+n <- c(50,100)
+parametry <- list(c(alfa=2,beta=2,gamma=0.2), c(alfa=3/2,beta=1,gamma=1))
+
+k <- 1  # licznik wierszy
+for(i in parametry){
+  for(j in n){
+    p <- runif(j)
+    dane <- Q(p, i["alfa"], i["beta"], i["gamma"])
+    wyniki_df[k, ] <- statystyki(dane)
+    k <- k + 1  # zwiększamy licznik
+  }
+}
+
+tabela <- xtable(wyniki_df, digits=5, caption='Podstawowe statystyki opisowe', label='tab_1') 
+
+colnames(tabela) <- c("średnia", "mediana", "odch_stand","min", "maks","rozstęp", "kw_dolny", "kw_górny") 
+
+rownames(tabela) <- c('dane_1.1','dane_1.2','dane_2.1','dane_2.2')
+
+print(tabela, type='latex', table.placement='H', caption.placement='bottom', include.rownames=TRUE)
+
+```
+
+Gdzie poprzez:  
+
+**dane_1.1** oznaczono statystyki opisowe dla danych wygenerowanych z rozkładu *WE($\alpha=2, \beta=2, \gamma$=0.2)* dla n=50.  
+**dane_1.2** oznaczono statystyki opisowe dla danych wygenerowanych z rozkładu *WE($\alpha=2, \beta=2, \gamma$=0.2)* dla n=100.  
+**dane_2.1** oznaczono statystyki opisowe dla danych wygenerowanych z rozkładu *WE($\alpha=0.5, \beta=1, \gamma$=1)* dla n=50.  
+**dane_2.2** oznaczono statystyki opisowe dla danych wygenerowanych z rozkładu *WE($\alpha=0.5, \beta=1, \gamma$=1)* dla n=100.
+
+
+```{r, results='asis', comment=FALSE, echo=FALSE}
+wyniki1=list(c(0,0,0), c(0,0,0))
+parametry <- list(c(alfa=2,beta=2,gamma=0.2), c(alfa=3/2,beta=1,gamma=1))
+
+wyniki1_df <- as.data.frame(do.call(rbind, wyniki1))
+
+for (i in 1:2) {
+  alfa <- parametry[[i]]["alfa"]
+  beta <- parametry[[i]]["beta"]
+  gamma <- parametry[[i]]["gamma"]
+  
+  wyniki1_df[i,1]   <- Q(0.5, alfa, beta, gamma)
+  wyniki1_df[i,2] <- Q(0.25, alfa, beta, gamma)
+  wyniki1_df[i,3] <- Q(0.75, alfa, beta, gamma)}
+
+
+tabela1 <- xtable(wyniki1_df, digits=5, caption='Teoretyczne podstawowe statystyki opisowe', label='tab_2') 
+
+colnames(tabela1) <- c("mediana", "kwartyl dolny", "kwartyl górny")
+
+rownames(tabela1) <- c('dane_1','dane_2')
+
+print(tabela1, type='latex', table.placement='H', caption.placement='bottom', include.rownames=TRUE)
+
+```
+
+Gdzie:  
+**dane_1** oznaczają teoretyczne wartości statystyk opisowych dla danych wygenerowanych z rozkładu *WE($\alpha=2, \beta=2, \gamma$=0.2)*.    
+**dane_2** oznaczają teoretyczne wartości statystyk opisowych dla danych wygenerowanych z rozkładu *WE($\alpha=0.5, \beta=1, \gamma$=1)*.
+
+Jak możemy zauważyć, wartości teoretyczne mediany oraz kwartyli dolnego i górnego odbiegają od wyników przedstawionych w Tabeli 1. Są one zbliżone, jednak nie pokrywają się dokładnie. Dla parametrów $\alpha=2$, $\beta=2$, $\gamma=0.2$, wartości kwartyli dolnego i górnego wraz ze wzrostem liczebności próby ($n$) zbliżają się do wartości teoretycznych, jednak mediana znacząco od nich odbiega. Możemy to rozumieć, jako fakt, że mediana może być bardziej wrażliwa na zmienność próby niż kwartyle w przypadku tych parametrów.
+
+
+Dla parametrów $\alpha=0.5$, $\beta=1$, $\gamma=1$, wartości statystyk obliczonych z próby są bliskie wartościom teoretycznym dla $n=50$. Przy większych liczebnościach próby różnice te się zwiększają. Dla tych parametrów powiększanie próby nie gwarantuje lepszego dopasowania mediany do wartości teoretycznej.
+

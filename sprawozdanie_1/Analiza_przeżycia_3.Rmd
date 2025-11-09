@@ -1,0 +1,274 @@
+---
+title: "Lista_3"
+author: "Olga Foriasz"
+date: "2025-10-15"
+output:
+  pdf_document: default
+  html_document: default
+header-includes:
+- \usepackage[OT4]{polski}
+- \usepackage[utf8]{inputenc}
+- \usepackage{graphicx}
+- \usepackage{float}
+subtitle: Analiza przeżycia
+fontsize: 11pt
+---
+# LISTA 3
+
+## Zadanie 1a - Oszacowania największej wiarygodności
+
+Dane bierzeny z zadania 3 z litsy 2. Wyznaczymy oszacowania największej wiarogodności średniego czasu do remisji choroby dla pacjentów leczonych lekiem A oraz pacjentów leczonych lekiem B. 
+
+```{r,echo=FALSE, warning=FALSE}
+## dane z zad.3 listy 2
+R=10
+n=20
+t0=1
+delta=numeric(n)
+grupa_A <- numeric(n)
+grupa_B <- numeric(n)
+
+grupa_A[1:10] <- c(0.03345514, 0.08656403, 0.08799947, 0.24385821, 0.27755032,
+0.40787247, 0.58825664, 0.64125620, 0.90679161, 0.94222208)
+
+grupa_B[1:10] <- c(0.03788958, 0.12207257, 0.20319983, 0.24474299, 0.30492413,
+0.34224462, 0.42950144, 0.44484582, 0.63805066, 0.69119721)
+
+## cenzurowanie I-go typu
+
+grupa_A[11:20] <- t0
+grupa_B[11:20] <- t0
+
+delta_A <- c(rep(1, 10), rep(0, 10))
+delta_B <- c(rep(1, 10), rep(0, 10))
+
+dane_A <- data.frame(czas = grupa_A, delta = delta_A)
+dane_B <- data.frame(czas = grupa_B, delta = delta_B)
+```
+
+```{r}
+T_a = sum(grupa_A[1:10]) + t0*(n-R)
+T_b = sum(grupa_B[1:10]) + t0*(n-R) 
+
+theta_a <- R/T_a
+theta_b <- R/T_b
+```
+
+Średni czas do remisji dla leku A wynosi: `r theta_a`, natomiast dla leku B: `r theta_b`
+
+
+## Zadanie 1b - Realizacje przedziału ufności
+
+Wyznaczamy realizację przedziału ufności na poziomie 1-$\alpha$ dla średniego czasu do remisji choroby osobno dla pacjentów leczonych lekiem A oraz lekiem B (dane z listy 2. z zadania 3.) Zakładamy, że są to zmienne z rozkładu wykładniczego. Za $\alpha$ przyjmujemy kolejno $\alpha$=0.05 oraz $\alpha$=0.01.
+
+
+
+```{r, echo=TRUE, warning=FALSE}
+library(binom)
+
+## dla alfy = 0.05
+alfa=0.05
+T.L <- binom.confint(R,n,conf.level=1-alfa, methods="exact")$lower
+T.U <- binom.confint(R,n,conf.level=1-alfa, methods = "exact")$upper
+
+TL1= (-log(1-T.L))/t0
+TU1= (-log(1-T.U))/t0
+
+TL1 = round(TL1,2)
+TU1 = round(TU1,2)
+## dla alfy = 0.01
+alfa=0.01
+T.L <- binom.confint(R,n,conf.level=1-alfa, methods="exact")$lower
+T.U <- binom.confint(R,n,conf.level=1-alfa, methods = "exact")$upper
+
+TL2= (-log(1-T.L))/t0
+TU2= (-log(1-T.U))/t0
+
+TL2 = round(TL2,2)
+TU2 = round(TU2,2)
+```
+Realizacją przedziału ufności dla $\alpha$ = 0.05 jest przedział [$T_L, T_U$] =[`r TL1`, `r TU1`], natomiast dla $\alpha$ = 0.01 przedział [$T_L, T_U$] =[`r TL2`, `r TU2`]
+
+## Zadanie 2 - Oszacowania największej wiarygodności i realizacja przedziału ufności dla danych z listy 2. zad.3
+
+```{r,echo=FALSE, warning=FALSE}
+##dane cenzurowane II-go typu
+R=10
+m=10
+n=20
+delta=numeric(n)
+grupa_A <- numeric(n)
+grupa_B <- numeric(n)
+
+grupa_A[1:10] <- c(0.03345514, 0.08656403, 0.08799947, 0.24385821, 0.27755032,
+0.40787247, 0.58825664, 0.64125620, 0.90679161, 0.94222208)
+
+grupa_B[1:10] <- c(0.03788958, 0.12207257, 0.20319983, 0.24474299, 0.30492413,
+0.34224462, 0.42950144, 0.44484582, 0.63805066, 0.69119721)
+
+grupa_A[11:20] <- grupa_A[m]
+grupa_B[11:20] <- grupa_B[m]
+
+delta_A <- c(rep(1, 10), rep(0, 10))
+delta_B <- c(rep(1, 10), rep(0, 10))
+
+dane_A <- data.frame(czas = grupa_A, delta = delta_A)
+dane_B <- data.frame(czas = grupa_B, delta = delta_B)
+```
+
+Przyjmujemy, że obserwacje czasu do remisji choroby były prowadzone do
+momentu, w którym u dziesięciu pacjentów zostanie ona zaobserwowana. Dla takich danych wyznaczamy najpierw oszacowania największej wiarygodności średniego czasu do remisji choroby dla pacjentów leczonych lekiem A oraz pacjentów leczonych lekiem B.
+
+```{r,echo=TRUE, warning=FALSE}
+m=10
+n=20
+theta_a <- round(m/(sum(grupa_A[1:m])+(n-m)*grupa_A[m]),2)
+theta_b <- round(m/(sum(grupa_B[1:m])+(n-m)*grupa_B[m]),2)
+```   
+
+Zatem z wyliczeń wynika, że oszacowania największej wiarygodności średniego czasu do remisji w grupie A wynoszą: `r theta_a`  a w grupie B: `r theta_b`.
+
+Następnie dla danych wyznaczamy realizację przedziału ufności na poziomie 1-$\alpha$, dla odpowiednio dwóch wartości $\alpha$: 0.05 i 0.01. 
+
+```{r,echo=TRUE, warning=FALSE}
+m=10
+n=20
+Ta<-sum(grupa_A[1:m])+(n-m)*grupa_A[m]
+Tb<-sum(grupa_B[1:m])+(n-m)*grupa_B[m]
+## dla alfy = 0.05
+alfa=0.05
+qm_a1 = qgamma(alfa/2,m,rate=m)
+TLa <- round((m*qm_a1)/Ta,2)
+qm_a2 = qgamma((1-alfa/2),m,rate=m)
+TUa <-round((m*qm_a2)/Ta,2)
+
+qm_b1 = qgamma(alfa/2,m,rate=m)
+TLb <- round((m*qm_b1)/Tb,2)
+qm_b2 = qgamma((1-alfa/2),m,rate=m)
+TUb <-round((m*qm_b2)/Tb,2)
+```
+Dla $\alpha$=0.05 realizacjami przedziałów ufności dla grupy A jest przedział [`r TLa`, `r TUa`] a dla grupy B: [`r TLb`, `r TUb`].
+
+Następnie wyznaczamy realizację przedziału ufności dla $\alpha$=0.01:
+```{r,echo=TRUE, warning=FALSE}
+m=10
+n=20
+## dla alfy = 0.01
+alfa=0.01
+qm_a1 = qgamma(alfa/2,m,m)
+TLa <- round((m*qm_a1)/Ta,2)
+qm_a2 = qgamma((1-alfa/2),m,m)
+TUa <-round((m*qm_a2)/Ta,2)
+
+qm_b1 = qgamma(alfa/2,m,m)
+TLb <- round((m*qm_a1)/Tb,2)
+qm_b2 = qgamma((1-alfa/2),m,m)
+TUb <- round((m*qm_b2)/Tb,2)
+```  
+
+Stąd otrzymujemy, że realizacjami przedziałów ufności dla grupy A jest przedział [`r TLa`, `r TUa`] a dla grupy B: [`r TLb`, `r TUb`]
+
+
+Realizacją przedziału ufności dla $\alpha$ = 0.05 jest przedział [$T_L, T_U$] =[`r TL1`,`r TU1`], natomiast dla $\alpha$ = 0.01 przedział [$T_L, T_U$] =[`r TL2`,`r TU2`]
+
+
+## Zadanie 3 - Porównanie dokładności estymatorów
+
+Przeprowadzono symulację w celu porównania dwóch estymatorów parametru $\vartheta$ rozkładu wykładniczego przy danych cenzurowanych I-go typu:
+
+\begin{equation}
+\hat{\vartheta} = \frac{R}{T_1}
+\end{equation}
+
+\begin{equation}
+\tilde{\vartheta} = -\frac{\log(1 - R/n)}{t_0}
+\end{equation}
+
+gdzie $R = \sum_{i=1}^n 1(X_i \le t_0)$ oraz $T_1 = \sum_{i=1}^R X_i + t_0(n - R)$.
+
+Symulację wykonano dla $\vartheta = 1$, liczności prób $n = 10, 30$ oraz czasów obserwacji $t_0 = 0.5, 1, 2$, powtarzając eksperyment $M = 10{,}000$ razy.
+Dla każdego przypadku obliczono obciążenie (Bias) oraz błąd średniokwadratowy (MSE) obu estymatorów.
+
+```{r , echo=FALSE}
+library(knitr)
+
+typ_I <- function(t0,theta,n){
+  X<-numeric(n)
+  delta <-numeric(n)
+  check <- 0
+  
+  while (check == 0){
+    X<-numeric(n)
+    delta <-numeric(n)
+    X=rexp(n, 1/theta)
+    X <- sort(X)
+    for(i in 1:n){
+      if(X[i]>t0){
+        X[i] <- t0
+        delta[i] <- 0
+        check <- 1
+      }else{delta[i]<-1}}
+  }
+  return(data.frame(X = X, delta = delta))
+  X <- sort(X)
+}
+symulacja <- function(theta,n,t0,M){
+  est1 <- numeric(M)
+  est2 <- numeric(M)
+  for (i in (1:M)){
+    dane <- typ_I(t0,theta,n)
+    R <- sum(dane$delta)
+    T1 <- sum(dane$X)
+    est1[i] <- R/T1
+    est2[i] <- -log(1-R/n)/t0
+  }
+  bias1 <- est1-theta
+  bias2 <- est2-theta
+  mse1 <- bias1^2
+  mse2 <- bias2^2
+  bias_c1 <- mean(bias1)
+  bias_c2 <- mean(bias2)
+  mse_c1 <- mean(mse1)
+  mse_c2 <- mean(mse2)
+  return(c(bias_c1, bias_c2, mse_c1, mse_c2))
+}
+#symulacja(1,10,1,10000)
+
+
+n_list <- c(10,30)
+t0_list <- c(0.5,1,2)
+wyniki <- list(6)
+i <- 1
+for (n in n_list){
+  for (t0 in t0_list){
+    wyniki[[i]] <- symulacja(1,n,t0,10000)
+    i = i+1
+  }
+}
+
+wyniki_df <- data.frame(
+  n = rep(n_list, each = length(t0_list)),
+  t0 = rep(t0_list, times = length(n_list)),
+  Bias_Est1 = round(sapply(wyniki, function(x) x[1]), 4),
+  Bias_Est2 = round(sapply(wyniki, function(x) x[2]), 4),
+  MSE_Est1 = round(sapply(wyniki, function(x) x[3]), 4),
+  MSE_Est2 = round(sapply(wyniki, function(x) x[4]), 4)
+)
+
+kable(wyniki_df, 
+      booktabs = TRUE,
+      col.names = c(
+        "n", 
+        "$t_0$", 
+        "Bias $\\hat{\\vartheta}$", 
+        "Bias $\\tilde{\\vartheta}$", 
+        "MSE $\\hat{\\vartheta}$", 
+        "MSE $\\tilde{\\vartheta}$"),
+      caption = "Wyniki symulacji dla różnych wartości n i t0")
+```
+
+Z przeprowadzonej analizy wynika, że wraz ze wzrostem liczności próby $n$ obciążenie i MSE obu estymatorów maleją, co potwierdza ich zgodność.
+Większe wartości $t_0$ (czyli mniejsze cenzurowanie) prowadzą do dokładniejszych oszacowań.
+W większości przypadków estymator $\hat{\vartheta} = \frac{R}{T_1}$ charakteryzuje się mniejszym błędem średniokwadratowym, co wskazuje na jego większą efektywność w porównaniu z estymatorem $\tilde{\vartheta} = \frac{-\log(1 - R/n)}{t_0}$.
+
+

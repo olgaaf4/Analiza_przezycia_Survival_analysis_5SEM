@@ -1,0 +1,987 @@
+---
+title: "Sprawozdanie I"
+author: "Olga Foriasz, Tomasz Warzecha"
+date: "2025-10-08"
+output:
+  pdf_document:
+    toc: true
+    fig_caption: true
+    fig_width: 5
+    fig_height: 4
+    number_sections: true
+header-includes:
+- \usepackage[OT4]{polski}
+- \usepackage[utf8]{inputenc}
+- \usepackage{graphicx}
+- \usepackage{float}
+subtitle: Analiza przeżycia
+fontsize: 11pt
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+```
+
+# LISTA 1
+
+## Zadanie 1 - Deklaracje
+
+Poniżej kolejno deklarowane są funkcje gęstości, dystrybuanty, dystrybuanty odwrotnej (funkcji kwantylowej oraz funkcji hazardu rozkładu *EW($\alpha$, $\beta$, $\gamma$)*)
+
+* Do wyznaczenia gęstości funkcji użyto wzoru:
+
+\begin{equation}
+f(x; \alpha, \beta, \gamma) =
+\frac{\alpha \gamma}{\beta}
+\left( \frac{x}{\beta} \right)^{\alpha - 1}
+\left[ 1 - \exp\left( -\left( \frac{x}{\beta} \right)^{\alpha} \right) \right]^{\gamma - 1}
+\exp\left( -\left( \frac{x}{\beta} \right)^{\alpha} \right).
+\end{equation}
+
+```{r}
+
+gestosc <- function(x, alfa, beta, gamma) {
+  (alfa * gamma / beta) *
+    (x / beta)^(alfa - 1) *
+    (1 - exp(-(x / beta)^alfa))^(gamma - 1) *
+    exp(-(x / beta)^alfa) * (x > 0)
+}
+
+
+```
+
+* Do wyznaczenia dystrybuanty funkcji zastosowano wzór:
+
+\begin{equation}
+F(x,\alpha, \beta, \gamma) = 1 - \exp\left[ -\left( \frac{t}{\beta} \right)^{\alpha} \right]
+\end{equation}
+
+```{r}
+
+dystrybuanta <- function(x, alfa, beta){
+  return((1-exp(- (x/beta)^alfa))^gamma)
+  }
+
+```
+
+* Do wyznaczenia funkcji kwantylowej wzięto wzór: 
+
+\begin{equation}
+Q(p) = \beta * (-ln(1-p^\frac{1}{\gamma}))^\frac{1}{\alpha}
+\end{equation}
+
+```{r}
+
+funkcja_kwantylowa <- function(p, alfa, beta, gamma){
+  return(beta*(-log((1-p^(1/gamma))^(1/alfa))))
+}
+
+```
+
+* Do wyznaczenia funkcji hazardu wykorzystano wzór:
+
+\begin{equation}
+h(x) = \frac{f(x)}{1-F(x)}
+\end{equation}
+
+gdzie f(x) jest funkcją gęstości rozkładu $WE(\alpha, \beta, \gamma)$ oraz F(x) jest dystrybuantą tego rozkładu.
+
+```{r}
+funkcja_hazardu <- function(x, alfa, beta, gamma){
+  return(gestosc(x, alfa, beta, gamma)/(1-dystrybuanta(x, alfa, beta,gamma)))
+}
+```
+
+## Zadanie 2 - Wykresy dla wybranych parametrów rozkładu 
+
+Poniżej przedstawiono na wykresie funkcję hazardu rozkładu $WE(\alpha, \beta, \gamma)$ dla różnych parametrów:
+
+```{r, echo=FALSE, fig.width=10, fig.height=5}
+library(ggplot2)
+
+dystrybuanta <- function(x, alfa, beta,gamma){
+  return((1-exp(-(x/beta)^alfa))^gamma)
+  }
+
+
+gestosc <- function(x, alfa, beta, gamma) {
+  (alfa * gamma / beta) *
+    (x / beta)^(alfa - 1) *
+    (1 - exp(-(x / beta)^alfa))^(gamma - 1) *
+    exp(-(x / beta)^alfa) * (x > 0)
+}
+
+funkcja_hazardu <- function(x, alfa, beta, gamma){
+  return(gestosc(x, alfa, beta, gamma)/(1-dystrybuanta(x, alfa, beta,gamma)))}
+
+x <- seq(0, 10, length.out = 500)
+  
+f1<- funkcja_hazardu(x, 1, 2, 3)
+f2<-funkcja_hazardu(x, 1/2, 1, 1/4)
+f3<-funkcja_hazardu(x, 5, 10, 1/10)
+f4<-funkcja_hazardu(x, 1/4, 1/2, 5)
+
+dane <- as.data.frame(x=x, f1=f1, f2=f2, f3=f3, f4=f4)
+
+ggplot(dane, aes(x=x)) +
+geom_line(aes(y = f1, color = "alfa=1, beta=2, gamma=3")) +
+geom_line(aes(y = f2, color = "alfa=0.5 ,beta=1, gamma=0.25")) +
+geom_line(aes(y = f3, color = "alfa=5, beta=10, gamma=0.1")) +
+geom_line(aes(y = f4, color = "alfa=0.25, beta=0.5, gamma=5")) +
+labs(title = "Wykresy funkcji", x="x", y="f(x)", color = "Parametry rozkładu") +   ylim(0, 2) 
+```
+
+
+Jak możemy zauważyć na wykresie, funkcja hazardu zmienia swoje zachowanie w zależności od przyjętych parametrów. W niektórych przypadkach jest funkcją rosnącą, w innych malejącą. Odpowiedni dobór parametrów pozwala kontrolować tempo wzrostu lub spadku wartości funkcji. Dzięki temu możemy modelować różne typy rozkładów hazardu, od szybko malejących po powoli rosnące, co jest istotne w analizie ryzyka i modelowaniu procesów stochastycznych.
+
+## Zadanie 3 - Program do generowania zmiennych
+
+Do generowania zmiennych z rozkładu $WE(\alpha, \beta, \gamma)$ na poczatku wykorzystujemy funkcje runif generującą liczby z rozkładu jednostajnego na odcinku (0,1). Następnie używając wcześniej zdefiniowanej funkcji kwantylowej (wzór (3)) do wyznaczenia zmiennych z rozkładu $WE(\alpha, \beta, \gamma)$.
+
+```{r, echo=TRUE}
+
+#ile zmiennych chcemy wylosować
+u=10
+
+#losujemy z U(0,1)
+p <- runif(u)
+
+#funkcja kwantylowa
+Q <- function(p, alfa, beta, gamma){
+  return(beta*(-log((1-p^(1/gamma))^(1/alfa))))
+}
+
+#wywołanie funkcji z parametrami alfa=1, beta=1, gamma=1
+#Q(p,1,1,1)
+
+
+```
+
+## Zadanie 4 - Wykresy dla ustalnoych parametrów i n=50, n=100
+
+Wygenerowane wykresy zostały dla parametrów:
+
+* W pierwszym przypadku: $\alpha$ = 2, $\beta$ = 2 oraz $\gamma$ = 0.2.
+* W drugim przypadku: $\alpha$ = 1.5, $\beta$ = 1 oraz $\gamma$ = 1.
+
+Dla każdej trójki parametrów wykresy wygenerowano dla n= 50 oraz n=100.
+
+```{r, echo=FALSE, fig.width=10, fig.height=5}
+par(mfrow=c(2,2))
+set.seed(123)
+gestosc <- function(x, alfa, beta, gamma) {
+  return((alfa * gamma / beta) *
+    (x / beta)^(alfa - 1) *
+    (1 - exp(-(x / beta)^alfa))^(gamma - 1) *
+    exp(-(x / beta)^alfa) * (x > 0))
+}
+
+Q <- function(p, alfa, beta, gamma){
+  return(beta*((-log(1-p^(1/gamma)))^(1/alfa)))
+}
+
+n <- c(50,100)
+parametry <- list(c(alfa=2,beta=2,gamma=0.2), c(alfa=3/2,beta=1,gamma=1))
+
+x.siatka <- seq(0, 10, length.out = 500)
+
+for(i in parametry){
+  for(j in n){
+  p <- runif(j)
+  dane <- Q(p, i["alfa"], i["beta"], i["gamma"])
+  h <- hist(dane, probability = TRUE, 
+  main = paste0("Rozkład EW: alfa=", i["alfa"], ", beta=", i["beta"], ", gamma=", i["gamma"], ", n=", j),
+  col="lightblue", ylim = c(0,1))
+  lines(x.siatka, gestosc(x.siatka, i["alfa"], i["beta"], i["gamma"]), col="red", lwd=2)
+}}
+```
+Widać, że dla pierwszej trójki parametrów ($\alpha=2, \beta=2, \gamma$=0.2) funkcja gęstości ma charakter „wannowy” ($\alpha$>1,$\alpha\gamma$<1), natomiast dla drugiej trójki parametrów ($\alpha=0.5, \beta=1, \gamma$=1) funkcja gęstości wykazuje rosnącą intensywność ($\alpha$>1,$\alpha\gamma$>=1).
+
+Można również zauważyć wpływ liczności próby na dopasowanie histogramu do funkcji gęstości. Dla większego n, np. n=100, histogram w przybliżeniu odwzorowuje kształt funkcji gęstości, choć nie pokrywa się z nią idealnie. Przy mniejszym n, np. n=50, rozbieżności między histogramem a wykresem gęstości stają się bardziej wyraźne.
+
+## Zadanie 5 - Podstawowe statystyki opisowe 
+
+Wyznaczamy kolejne statystyki takie jak średnia, mediana, odchylenie standardowe, minimum i maksimum, rozstęp, kwartyl dolny i kwartyl górny.
+
+```{r}
+
+x = c(4,5,5,6,7,7)
+
+statystyki <- function(x){
+  ## liczenie sredniej
+  suma <- 0
+  for (el in x){
+    suma <- suma + el
+  }
+  srednia <- suma/length(x)
+  
+  ##liczenie mediany
+  if (length(x)%%2 == 0) {
+   mediana <- (x[length(x)/2]+x[(length(x)/2)+1])/2
+  } else { mediana <- x[floor(length(x)/2) + 1]}
+  
+  ##liczenie odchylenia standardowego
+  suma <- 0
+  for (el in x){
+    suma <- suma + (el-srednia)^2
+  }
+  odch <- (suma/(length(x)-1))^(1/2)
+  
+  ##liczenie minimum
+  minimum <- x[1]
+  for(el in x){
+    if(el < minimum){
+      minimum <- el
+    }}
+  
+  ##liczenie maksimum
+  maksimum <- x[1]
+  for(el in x){
+    if(el > maksimum){
+      maksimum <- el
+    }}
+  
+  ##liczenie rozstępu
+  rozstep = maksimum - minimum
+  
+  ##liczenie kwartylu dolnego
+  kwartyl_d <- quantile(x, 0.25)
+  
+  ##liczenie kwartylu górnego
+  kwartyl_g <- quantile(x, 0.75)
+  
+  ## zwracanie odpowiedzi
+  wyn <- c(srednia, mediana, odch, minimum, maksimum, rozstep, kwartyl_d, kwartyl_g)
+  return(wyn)
+}
+```
+
+```{r, results='asis', comment=FALSE, echo=FALSE}
+library(xtable)
+wyniki=list(c(0,0,0,0,0,0,0,0),c(0,0,0,0,0,0,0,0),c(0,0,0,0,0,0,0,0),c(0,0,0,0,0,0,0,0))
+
+wyniki_df <- as.data.frame(do.call(rbind, wyniki))
+n <- c(50,100)
+parametry <- list(c(alfa=2,beta=2,gamma=0.2), c(alfa=3/2,beta=1,gamma=1))
+
+k <- 1  # licznik wierszy
+for(i in parametry){
+  for(j in n){
+    p <- runif(j)
+    dane <- Q(p, i["alfa"], i["beta"], i["gamma"])
+    wyniki_df[k, ] <- statystyki(dane)
+    k <- k + 1  # zwiększamy licznik
+  }
+}
+
+tabela <- xtable(wyniki_df, digits=5, caption='Podstawowe statystyki opisowe', label='tab_1') 
+
+colnames(tabela) <- c("średnia", "mediana", "odch_stand","min", "maks","rozstęp", "kw_dolny", "kw_górny") 
+
+rownames(tabela) <- c('dane_1.1','dane_1.2','dane_2.1','dane_2.2')
+
+print(tabela, type='latex', table.placement='H', caption.placement='top', include.rownames=TRUE)
+
+```
+
+Gdzie poprzez:  
+
+**dane_1.1** oznaczono statystyki opisowe dla danych wygenerowanych z rozkładu *WE($\alpha=2, \beta=2, \gamma$=0.2)* dla n=50.  
+**dane_1.2** oznaczono statystyki opisowe dla danych wygenerowanych z rozkładu *WE($\alpha=2, \beta=2, \gamma$=0.2)* dla n=100.  
+**dane_2.1** oznaczono statystyki opisowe dla danych wygenerowanych z rozkładu *WE($\alpha=0.5, \beta=1, \gamma$=1)* dla n=50.  
+**dane_2.2** oznaczono statystyki opisowe dla danych wygenerowanych z rozkładu *WE($\alpha=0.5, \beta=1, \gamma$=1)* dla n=100.
+
+
+```{r, results='asis', comment=FALSE, echo=FALSE}
+wyniki1=list(c(0,0,0), c(0,0,0))
+parametry <- list(c(alfa=2,beta=2,gamma=0.2), c(alfa=3/2,beta=1,gamma=1))
+
+wyniki1_df <- as.data.frame(do.call(rbind, wyniki1))
+
+for (i in 1:2) {
+  alfa <- parametry[[i]]["alfa"]
+  beta <- parametry[[i]]["beta"]
+  gamma <- parametry[[i]]["gamma"]
+  
+  wyniki1_df[i,1]   <- Q(0.5, alfa, beta, gamma)
+  wyniki1_df[i,2] <- Q(0.25, alfa, beta, gamma)
+  wyniki1_df[i,3] <- Q(0.75, alfa, beta, gamma)}
+
+
+tabela1 <- xtable(wyniki1_df, digits=5, caption='Teoretyczne podstawowe statystyki opisowe', label='tab_2') 
+
+colnames(tabela1) <- c("mediana", "kwartyl dolny", "kwartyl górny")
+
+rownames(tabela1) <- c('dane_1','dane_2')
+
+print(tabela1, type='latex', table.placement='H', caption.placement='top', include.rownames=TRUE)
+
+```
+
+Gdzie:  
+**dane_1** oznaczają teoretyczne wartości statystyk opisowych dla danych wygenerowanych z rozkładu *WE($\alpha=2, \beta=2, \gamma$=0.2)*.    
+**dane_2** oznaczają teoretyczne wartości statystyk opisowych dla danych wygenerowanych z rozkładu *WE($\alpha=0.5, \beta=1, \gamma$=1)*.
+
+Jak możemy zauważyć, wartości teoretyczne mediany oraz kwartyli dolnego i górnego odbiegają od wyników przedstawionych w Tabeli 1. Są one zbliżone, jednak nie pokrywają się dokładnie. Dla parametrów $\alpha=2$, $\beta=2$, $\gamma=0.2$, wartości kwartyli dolnego i górnego wraz ze wzrostem liczebności próby ($n$) zbliżają się do wartości teoretycznych, jednak mediana znacząco od nich odbiega. Możemy to rozumieć, jako fakt, że mediana może być bardziej wrażliwa na zmienność próby niż kwartyle w przypadku tych parametrów.
+
+Dla parametrów $\alpha=0.5$, $\beta=1$, $\gamma=1$, wartości statystyk obliczonych z próby są bliskie wartościom teoretycznym dla $n=50$. Przy większych liczebnościach próby różnice te się zwiększają. Dla tych parametrów powiększanie próby nie gwarantuje lepszego dopasowania mediany do wartości teoretycznej.
+
+# LISTA 2
+
+## Zadanie 1 - Generowanie n zmiennych cenzurowanych
+
+Do wygenerowania n zmiennych cenzurowanych z uogólnionego rozkładu wykładniczego **GE($\lambda, \alpha$)** I-go typu wykorzystaliśmy generowanie zmiennych losowych z rozkładu jednostajnego U(0,1). Następnie dla każdej zmiennej zastosowano wzór odwróceonej dystrybuanty, a kolejno dla X[i] większych od $t_0$ zamieniono je na wartość $t_0$, i zaznaczono cenzurowanie poprzez $\delta$ = 0.
+
+```{r}
+
+## wzor : F(t)=(1-e)^(-lambda*t)
+## t= -(1/lambda)*ln(1-p^(1/alfa))
+
+typ_I <- function(t0, alfa, lambda, n){
+  p <- runif(n)
+  X<-numeric(n)
+  delta <-numeric(n)
+  for(i in 1:n){
+  X[i]=(-(1/lambda))*log(1-(p[i])^(1/alfa))
+  if(X[i]>t0){
+    X[i] <- t0
+    delta[i] <- 0
+  }else{delta[i]<-1}}
+  return(data.frame(X = X, delta = delta))
+}
+
+
+```
+
+Aby wygenerować n zmiennych cenzurowanych z uogólnionego rozkładu wykładniczego **GE($\lambda, \alpha$)** typu II, zastosowaliśmy metodę dystrybuanty odwrotnej. Następnie posortowaliśmy wektor X, a od wartości $X_m$ każdą kolejną obserwację zastąpiliśmy właśnie tą wartością. Wektorowi cenzurowania $\delta$ przypisaliśmy odpowiednio: 1 dla obserwacji niecenzurowanych oraz 0 dla cenzurowanych.
+
+```{r}
+typ_II <- function(m, alfa, lambda, n){
+  p <- runif(n)
+  X<-numeric(n)
+  delta <-numeric(n)
+  for(i in 1:n){
+  X[i]=(-(1/lambda))*log(1-(p[i])^(1/alfa))}
+  sort(X)
+  for (i in (n-m):n){
+    X[i] <- X[m]
+    delta[i] <- 0
+  }
+  for(i in 1:m){delta[i]=1}
+  return(data.frame(X = X, delta = delta))
+}
+```
+
+Do wygenerowania n zmiennych z rozkładu  **GE($\lambda, \alpha$)** przy cenzurowaniu losowym (niezależnym) wygenerowano n liczb losowych z rozkładu U(0,1) i zastosowano metodę odwróconej dystrybuanty. Następnie wygenerowano wektor C z rozkładu wykładniczego E($\eta$) oraz przypisano wskaźnik cenzurowania $\delta$=1 dla obserwacji niecenzurowanych i 0 dla cenzurowanych.
+
+```{r}
+
+cenz_losowo <- function(eta, alfa, lambda, n){
+  p <- runif(n)
+  X<-numeric(n)
+  C<-numeric(n)
+  delta <-numeric(n)
+  for(i in 1:n){
+  X[i]=(-(1/lambda))*log(1-(p[i])^(1/alfa))
+  C[i]=rexp(1, rate=1/eta)
+  X[i]=min(X[i],C[i])
+  if(X[i]== C[i]){
+    delta[i]=0
+  }else{delta[i]=1}
+  }
+  return(data.frame(X = X, delta = delta))}
+```
+
+## Zadanie 2 - Generowanie danych cenzurowanych
+
+Korzystając z napisanych funkcji wygenerowaliśmy zestaw 40 danych dla cenzurowania:
+
+* typu I-go:
+```{r}
+dane_1 <- typ_I(1,0.5,1,40)
+head(dane_1,5)
+```
+
+  
+* typu II-go:
+```{r}
+dane_2 <- typ_II(10,0.5,1,40)
+head(dane_2,5)
+```
+  
+* losowego:
+```{r}
+dane_3 <- cenz_losowo(0.23,0.5,1,40)
+head(dane_3,5)
+```
+
+Następnie dla danych wyznaczyliśmy statystyki opisowe przedstawione w Tabeli 3. Poprzez **dane_1** oznaczono dane zawierające zmienne w przypadku cenzurowania I-go typu. **Dane_2** - zawierają zmienne w przypadku cenzurowania II-go typu, a **dane_3** - w przypadku cenzurowania losowego(niezależnego).
+
+```{r, echo=FALSE}
+
+statystyki <- function(x,y){
+  min <- min(x)
+  dol_kwartyl <- quantile(x, 0.25)
+  gor_kwartyl <- quantile(x, 0.75)
+  mediana <- median(x)
+  maks <- max(x)
+  rozstep <- maks - min
+  ile=0
+  for(i in y){
+    if(i==0){ile=ile+1}
+  }
+  odsetek = ile/length(x)
+  return(list(
+    min = min,
+    dol_kwartyl = dol_kwartyl,
+    gor_kwartyl = gor_kwartyl,
+    mediana = mediana,
+    maks = maks,
+    rozstep = rozstep,
+    ile_cenz = ile,
+    odsetek_cenz = odsetek
+  ))
+}
+wyniki_1 <- statystyki(dane_1$X,dane_1$delta)
+wyniki_2 <- statystyki(dane_2$X, dane_2$delta)
+wyniki_3 <- statystyki(dane_3$X, dane_3$delta)
+
+
+```
+\newpage
+```{r, echo=FALSE, results='asis', comment=FALSE, message=FALSE}
+library(xtable)
+
+wyniki <- rbind(
+  cbind(Zestaw = "dane_1", data.frame(wyniki_1)),
+  cbind(Zestaw = "dane_2", data.frame(wyniki_2)),
+  cbind(Zestaw = "dane_3", data.frame(wyniki_3))
+)
+
+tabela <- xtable(wyniki, digits=5, caption='Statystyki opisowe', label='tab_3') 
+colnames(tabela) <- c('dane','min','dolny_kwartyl','gorny_kwartyl','mediana','maks', 'rozstep','liczba cenz','odsetek')
+
+print(tabela, type='latex', table.placement='', align = 'c',   caption.placement='top', include.rownames=FALSE,  comment = FALSE)
+
+```
+
+Przy statystykach opisowych dla danych cenzurowanych wzięliśmy pod uwagę wartości takich statytsyk jak minimum, maksimum, rozstęp, kwartyl górny i dolny, medianę, liczbę danych cenzurowanych oraz ich odsetek. Dzięki temu możliwa jest szybka ocena stopnia cenzurowania oraz porównanie podstawowych charakterystyk rozkładu między różnymi zestawami danych. Należy jednak pamiętać, że uzyskane statystyki klasyczne (np. mediana, kwartyle) mogą być zniekształcone przez obecność danych cenzurowanych, dlatego ich interpretacja powinna być ostrożna. Mimo to funkcja stanowi użyteczne narzędzie do wstępnego opisu i porównania zbiorów danych zawierających obserwacje niepełne.
+
+
+## zadanie 3 - Zadanie praktyczne
+
+```{r, echo=FALSE, results='asis', comment=FALSE}
+n=20
+t0=1
+delta=numeric(n)
+grupa_A <- numeric(n)
+grupa_B <- numeric(n)
+
+grupa_A[1:10] <- c(0.03345514, 0.08656403, 0.08799947, 0.24385821, 0.27755032,
+0.40787247, 0.58825664, 0.64125620, 0.90679161, 0.94222208)
+
+grupa_B[1:10] <- c(0.03788958, 0.12207257, 0.20319983, 0.24474299, 0.30492413,
+0.34224462, 0.42950144, 0.44484582, 0.63805066, 0.69119721)
+
+## cenzurowanie I-go typu
+
+grupa_A[11:20] <- t0
+grupa_B[11:20] <- t0
+
+delta_A <- c(rep(1, 10), rep(0, 10))
+delta_B <- c(rep(1, 10), rep(0, 10))
+
+dane_A <- data.frame(czas = grupa_A, delta = delta_A)
+dane_B <- data.frame(czas = grupa_B, delta = delta_B)
+
+## wyznaczenie statystyk
+stat_1<- statystyki(dane_A$czas,dane_A$delta)
+stat_2<- statystyki(dane_B$czas,dane_B$delta)
+
+## tworzenie tabeli
+library(xtable)
+
+wyniki <- rbind(
+  cbind(Zestaw = "grupa_A", data.frame(stat_1)),
+  cbind(Zestaw = "grupa_B", data.frame(stat_2))
+)
+
+tabela <- xtable(wyniki, digits=5, caption='Statystyki opisowe', label='tab_4') 
+colnames(tabela) <- c('dane','min','dolny_kwartyl','gorny_kwartyl','mediana','maks', 'rozstep','liczba cenz','odsetek')
+
+print(tabela, caption.placement='top',table.placement='H',include.rownames=FALSE,  comment = FALSE, align = 'c', centering = TRUE)
+
+```
+
+W przypadku obu grup odsetek danych cenzurowanych jest taki sam - w zestawach A i B występuje po 10 obserwacji cenzurowanych oraz 10 niecenzurowanych. Patrząc na wartości minimalne, można zauważyć, że czas do osiągnięcia remisji w grupie A był nieznacznie krótszy niż w grupie B. Dane cenzurowane mają wartość $t_0$ = 1, ponieważ obserwacja trwała przez rok, dlatego w obu przypadkach maksimum jest jednakowe i równe 1. Mediana w grupie A wynosi 0,97, a w grupie B – 0,85. Dolne kwartyle dla grup A i B wynoszą odpowiednio 0,38 i 0,33, natomiast górny kwartyl w obu przypadkach wynosi 1. Wyniki te można interpretować w ten sposób, że choć minimalny czas wystąpienia remisji był krótszy w grupie A, to większa liczba pacjentów osiągnęła remisję szybciej w grupie B. Można więc wnioskować, że mimo szybszych początkowych efektów leku w grupie A, ostatecznie lek B okazał się skuteczniejszy.
+
+# LISTA 3
+
+## Zadanie 1a - Oszacowania największej wiarygodności
+
+Dane bierzeny z zadania 3 z litsy 2. Wyznaczymy oszacowania największej wiarogodności średniego czasu do remisji choroby dla pacjentów leczonych lekiem A oraz pacjentów leczonych lekiem B. 
+
+```{r,echo=FALSE, warning=FALSE}
+## dane z zad.3 listy 2
+R=10
+n=20
+t0=1
+delta=numeric(n)
+grupa_A <- numeric(n)
+grupa_B <- numeric(n)
+
+grupa_A[1:10] <- c(0.03345514, 0.08656403, 0.08799947, 0.24385821, 0.27755032,
+0.40787247, 0.58825664, 0.64125620, 0.90679161, 0.94222208)
+
+grupa_B[1:10] <- c(0.03788958, 0.12207257, 0.20319983, 0.24474299, 0.30492413,
+0.34224462, 0.42950144, 0.44484582, 0.63805066, 0.69119721)
+
+## cenzurowanie I-go typu
+
+grupa_A[11:20] <- t0
+grupa_B[11:20] <- t0
+
+delta_A <- c(rep(1, 10), rep(0, 10))
+delta_B <- c(rep(1, 10), rep(0, 10))
+
+dane_A <- data.frame(czas = grupa_A, delta = delta_A)
+dane_B <- data.frame(czas = grupa_B, delta = delta_B)
+```
+
+```{r}
+T_a = sum(grupa_A[1:10]) + t0*(n-R)
+T_b = sum(grupa_B[1:10]) + t0*(n-R) 
+
+theta_a <- round(R/T_a,3)
+theta_b <- round(R/T_b,3)
+```
+
+Średni czas do remisji dla leku A wynosi: `r theta_a`, natomiast dla leku B: `r theta_b`
+
+## Zadanie 1b - Realizacje przedziału ufności
+
+Wyznaczamy realizację przedziału ufności na poziomie 1-$\alpha$ dla średniego czasu do remisji choroby osobno dla pacjentów leczonych lekiem A oraz lekiem B (dane z listy 2. z zadania 3.) Zakładamy, że są to zmienne z rozkładu wykładniczego. Za $\alpha$ przyjmujemy kolejno $\alpha$=0.05 oraz $\alpha$=0.01.
+
+```{r,echo=FALSE, warning=FALSE}
+## dane z zad.3 listy 2
+R=10
+n=20
+t0=1
+delta=numeric(n)
+grupa_A <- numeric(n)
+grupa_B <- numeric(n)
+
+grupa_A[1:10] <- c(0.03345514, 0.08656403, 0.08799947, 0.24385821, 0.27755032,
+0.40787247, 0.58825664, 0.64125620, 0.90679161, 0.94222208)
+
+grupa_B[1:10] <- c(0.03788958, 0.12207257, 0.20319983, 0.24474299, 0.30492413,
+0.34224462, 0.42950144, 0.44484582, 0.63805066, 0.69119721)
+
+## cenzurowanie I-go typu
+
+grupa_A[11:20] <- t0
+grupa_B[11:20] <- t0
+
+delta_A <- c(rep(1, 10), rep(0, 10))
+delta_B <- c(rep(1, 10), rep(0, 10))
+
+dane_A <- data.frame(czas = grupa_A, delta = delta_A)
+dane_B <- data.frame(czas = grupa_B, delta = delta_B)
+```
+
+```{r, echo=TRUE, warning=FALSE}
+library(binom)
+
+## dla alfy = 0.05
+alfa=0.05
+T.L <- binom.confint(R,n,conf.level=1-alfa, methods="exact")$lower
+T.U <- binom.confint(R,n,conf.level=1-alfa, methods = "exact")$upper
+
+TL1= (-log(1-T.L))/t0
+TU1= (-log(1-T.U))/t0
+
+TL1 = round(TL1,2)
+TU1 = round(TU1,2)
+## dla alfy = 0.01
+alfa=0.01
+T.L <- binom.confint(R,n,conf.level=1-alfa, methods="exact")$lower
+T.U <- binom.confint(R,n,conf.level=1-alfa, methods = "exact")$upper
+
+TL2= (-log(1-T.L))/t0
+TU2= (-log(1-T.U))/t0
+
+TL2 = round(TL2,2)
+TU2 = round(TU2,2)
+```
+Realizacją przedziału ufności dla $\alpha$ = 0.05 jest przedział [$T_L, T_U$] =[`r TL1`, `r TU1`], natomiast dla $\alpha$ = 0.01 przedział [$T_L, T_U$] =[`r TL2`, `r TU2`]
+
+## Zadanie 2 - Oszacowania największej wiarygodności i realizacja przedziału ufności dla danych z listy 2. zad.3
+
+```{r,echo=FALSE, warning=FALSE}
+##dane cenzurowane II-go typu
+R=10
+m=10
+n=20
+delta=numeric(n)
+grupa_A <- numeric(n)
+grupa_B <- numeric(n)
+
+grupa_A[1:10] <- c(0.03345514, 0.08656403, 0.08799947, 0.24385821, 0.27755032,
+0.40787247, 0.58825664, 0.64125620, 0.90679161, 0.94222208)
+
+grupa_B[1:10] <- c(0.03788958, 0.12207257, 0.20319983, 0.24474299, 0.30492413,
+0.34224462, 0.42950144, 0.44484582, 0.63805066, 0.69119721)
+
+grupa_A[11:20] <- grupa_A[m]
+grupa_B[11:20] <- grupa_B[m]
+
+delta_A <- c(rep(1, 10), rep(0, 10))
+delta_B <- c(rep(1, 10), rep(0, 10))
+
+dane_A <- data.frame(czas = grupa_A, delta = delta_A)
+dane_B <- data.frame(czas = grupa_B, delta = delta_B)
+```
+
+Przyjmujemy, że obserwacje czasu do remisji choroby były prowadzone do
+momentu, w którym u dziesięciu pacjentów zostanie ona zaobserwowana. Dla takich danych wyznaczamy najpierw oszacowania największej wiarygodności średniego czasu do remisji choroby dla pacjentów leczonych lekiem A oraz pacjentów leczonych lekiem B.
+
+```{r,echo=TRUE, warning=FALSE}
+m=10
+n=20
+theta_a <- round(m/(sum(grupa_A[1:m])+(n-m)*grupa_A[m]),2)
+theta_b <- round(m/(sum(grupa_B[1:m])+(n-m)*grupa_B[m]),2)
+```   
+
+Zatem z wyliczeń wynika, że oszacowania największej wiarygodności średniego czasu do remisji w grupie A wynoszą: `r theta_a`  a w grupie B: `r theta_b`.
+
+Następnie dla danych wyznaczamy realizację przedziału ufności na poziomie 1-$\alpha$, dla odpowiednio dwóch wartości $\alpha$: 0.05 i 0.01. 
+
+```{r,echo=TRUE, warning=FALSE}
+m=10
+n=20
+Ta<-sum(grupa_A[1:m])+(n-m)*grupa_A[m]
+Tb<-sum(grupa_B[1:m])+(n-m)*grupa_B[m]
+## dla alfy = 0.05
+alfa=0.05
+qm_a1 = qgamma(alfa/2,m,rate=m)
+TLa <- round((m*qm_a1)/Ta,2)
+qm_a2 = qgamma((1-alfa/2),m,rate=m)
+TUa <-round((m*qm_a2)/Ta,2)
+
+qm_b1 = qgamma(alfa/2,m,rate=m)
+TLb <- round((m*qm_b1)/Tb,2)
+qm_b2 = qgamma((1-alfa/2),m,rate=m)
+TUb <-round((m*qm_b2)/Tb,2)
+```
+Dla $\alpha$=0.05 realizacjami przedziałów ufności dla grupy A jest przedział [`r TLa`, `r TUa`] a dla grupy B: [`r TLb`, `r TUb`].
+
+Następnie wyznaczamy realizację przedziału ufności dla $\alpha$=0.01:
+```{r,echo=TRUE, warning=FALSE}
+m=10
+n=20
+## dla alfy = 0.01
+alfa=0.01
+qm_a1 = qgamma(alfa/2,m,m)
+TLa <- round((m*qm_a1)/Ta,2)
+qm_a2 = qgamma((1-alfa/2),m,m)
+TUa <-round((m*qm_a2)/Ta,2)
+
+qm_b1 = qgamma(alfa/2,m,m)
+TLb <- round((m*qm_a1)/Tb,2)
+qm_b2 = qgamma((1-alfa/2),m,m)
+TUb <- round((m*qm_b2)/Tb,2)
+```  
+
+Stąd otrzymujemy, że realizacjami przedziałów ufności dla grupy A jest przedział [`r TLa`, `r TUa`] a dla grupy B: [`r TLb`, `r TUb`].
+
+## Zadanie 3 - Porównanie dokładności estymatorów
+
+Przeprowadzono symulację w celu porównania dwóch estymatorów parametru $\vartheta$ rozkładu wykładniczego przy danych cenzurowanych I-go typu:
+
+\begin{equation}
+\hat{\vartheta} = \frac{R}{T_1}
+\end{equation}
+
+\begin{equation}
+\tilde{\vartheta} = -\frac{\log(1 - R/n)}{t_0}
+\end{equation}
+
+gdzie $R = \sum_{i=1}^n 1(X_i \le t_0)$ oraz $T_1 = \sum_{i=1}^R X_i + t_0(n - R)$.
+
+Symulację wykonano dla $\vartheta = 1$, liczności prób $n = 10, 30$ oraz czasów obserwacji $t_0 = 0.5, 1, 2$, powtarzając eksperyment $M = 10{,}000$ razy.
+Dla każdego przypadku obliczono obciążenie (Bias) oraz błąd średniokwadratowy (MSE) obu estymatorów.
+
+```{r , echo=FALSE}
+library(knitr)
+
+typ_I <- function(t0,theta,n){
+  X<-numeric(n)
+  delta <-numeric(n)
+  check <- 0
+  
+  while (check == 0){
+    X<-numeric(n)
+    delta <-numeric(n)
+    X=rexp(n, 1/theta)
+    X <- sort(X)
+    for(i in 1:n){
+      if(X[i]>t0){
+        X[i] <- t0
+        delta[i] <- 0
+        check <- 1
+      }else{delta[i]<-1}}
+  }
+  return(data.frame(X = X, delta = delta))
+  X <- sort(X)
+}
+symulacja <- function(theta,n,t0,M){
+  est1 <- numeric(M)
+  est2 <- numeric(M)
+  for (i in (1:M)){
+    dane <- typ_I(t0,theta,n)
+    R <- sum(dane$delta)
+    T1 <- sum(dane$X)
+    est1[i] <- R/T1
+    est2[i] <- -log(1-R/n)/t0
+  }
+  bias1 <- est1-theta
+  bias2 <- est2-theta
+  mse1 <- bias1^2
+  mse2 <- bias2^2
+  bias_c1 <- mean(bias1)
+  bias_c2 <- mean(bias2)
+  mse_c1 <- mean(mse1)
+  mse_c2 <- mean(mse2)
+  return(c(bias_c1, bias_c2, mse_c1, mse_c2))
+}
+#symulacja(1,10,1,10000)
+
+
+n_list <- c(10,30)
+t0_list <- c(0.5,1,2)
+wyniki <- list(6)
+i <- 1
+for (n in n_list){
+  for (t0 in t0_list){
+    wyniki[[i]] <- symulacja(1,n,t0,10000)
+    i = i+1
+  }
+}
+
+wyniki_df <- data.frame(
+  n = rep(n_list, each = length(t0_list)),
+  t0 = rep(t0_list, times = length(n_list)),
+  Bias_Est1 = round(sapply(wyniki, function(x) x[1]), 4),
+  Bias_Est2 = round(sapply(wyniki, function(x) x[2]), 4),
+  MSE_Est1 = round(sapply(wyniki, function(x) x[3]), 4),
+  MSE_Est2 = round(sapply(wyniki, function(x) x[4]), 4)
+)
+
+kable(wyniki_df, 
+      booktabs = TRUE,
+      col.names = c(
+        "n", 
+        "$t_0$", 
+        "Bias $\\hat{\\vartheta}$", 
+        "Bias $\\tilde{\\vartheta}$", 
+        "MSE $\\hat{\\vartheta}$", 
+        "MSE $\\tilde{\\vartheta}$"),
+      caption = "Wyniki symulacji dla różnych wartości n i t0")
+```
+
+Z przeprowadzonej analizy wynika, że wraz ze wzrostem liczności próby $n$ obciążenie i MSE obu estymatorów maleją, co potwierdza ich zgodność.
+Większe wartości $t_0$ (czyli mniejsze cenzurowanie) prowadzą do dokładniejszych oszacowań.
+W większości przypadków estymator $\hat{\vartheta} = \frac{R}{T_1}$ charakteryzuje się mniejszym błędem średniokwadratowym, co wskazuje na jego większą efektywność w porównaniu z estymatorem $\tilde{\vartheta} = \frac{-\log(1 - R/n)}{t_0}$.
+
+
+
+# LISTA 4
+
+## Zadanie 1 - Funkcja ilorazu wiarygodności
+
+Zadanie zaczynamy od wygenerowania danych cenzurowanych I-go typu, które są realizacjami zmiennych losowych z rozkładu wykładniczego.
+
+```{r, warning=FALSE}
+generowanie_1 <- function(n,lambda){
+  x <- rexp(n,lambda)
+  x <- sort(x)
+  t0 <- mean(x)
+  delta <- numeric(n)
+  delta[x<=t0]=1
+  x[x>t0]=t0
+  dane <- data.frame(x,delta)
+  names(dane)<-c("czas","dane")
+  return(dane)
+}
+
+##generowanie_1(10,1/2)
+```
+\newpage
+Następnie piszemy funkcję wyliczającą funkcję wiarygodności:
+
+```{r, warning=FALSE}
+
+L <- function(x, t0, r, theta) {
+  n <- length(x$czas)
+  return (factorial(n) / factorial(n - r) * theta^r *
+           exp(-theta * (sum(x$czas[1:r]) + t0 * (n - r))))
+}
+
+
+```
+
+Korzystając z wcześniejszych funkcji deklarujemy następną, w której wartością zwracaną będzie wartość poziomu krytycznego w teście ilorazu wiarygodności do testowania hipotez dwustronnych (type="two.sided"), jednostronnych prawostronnie (type="greater"), jednostronnych lewostronnie (type="less"):
+
+```{r, warning=FALSE}
+IW <- function(x,t0,r,theta0,type){
+  n <- length(x$czas)
+  T1 <- sum(x$czas[1:r])+t0*(n-r)
+  t <- r/T1
+  mianownik <- L(x,t0, r, t)
+  if(type=="two.sided"){
+    licznik = L(x,t0, r, theta0)
+  }
+  if(type=="greater"){
+    if(mianownik <= theta0){
+      licznik=mianownik
+    }else{licznik=L(x,t0, r, theta0)}
+  }
+  if(type=="less"){
+    if(mianownik>theta0){
+      licznik=mianownik
+    }else{licznik=L(x,t0, r, theta0)}
+  }
+  lambda = licznik/mianownik
+  G=-2*log(lambda)
+  return(1-pchisq(G,1))
+}
+```
+
+## Zadanie 2 - Oszacowanie testu mocy za pomocą symulacji
+
+W tym zadaniu przeprowadzono symulacje mające na celu oszacowanie mocy testu ilorazu wiarygodności oraz jego rozmiaru dla wybranych wartości parametrów.
+
+Założono, że badane dane pochodzą z rozkładu wykładniczego, a cenzurowanie jest typu I przy ustalonym czasie `t_0 = 0.5`. Hipoteza zerowa dotyczyła wartości parametru $\theta_0 = 3$, natomiast alternatywy — dziesięć różnych wartości parametru $\theta$: 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5. Dla każdej z tych wartości przeprowadzono $M = 1000$ replikacji testu.
+
+Symulacje wykonano dla dwóch liczebności prób: $n = 20$ oraz $n = 50$.  
+Na podstawie otrzymanych wartości p-value wyznaczono estymator mocy testu  oraz rozmiaru testu.
+
+Na wykresie poniżej przedstawiono krzywe mocy testu dla obu wielkości prób.  
+Dodatkowo zaznaczono:
+- przerywaną linię poziomą odpowiadającą poziomowi istotności $\alpha = 0.05$,  
+- przerywaną linię pionową dla $\theta_0 = 3$
+
+```{r , echo=FALSE, fig.align='center'}
+set.seed(666)
+library(ggplot2)
+typ_I <- function(t0,theta,n){
+  X<-numeric(n)
+  delta <-numeric(n)
+  check <- 0
+  
+  while (check == 0){
+    X<-numeric(n)
+    delta <-numeric(n)
+    X=rexp(n, theta)
+    X <- sort(X)
+    for(i in 1:n){
+      if(X[i]>t0){
+        X[i] <- t0
+        delta[i] <- 0
+        check <- 1
+      }else{delta[i]<-1}}
+  }
+  czas <- sort(X)
+  return(data.frame(czas = czas, delta = delta))
+}
+symulacja_moc <- function(theta,theta0,n,t0,alpha = 0.05,M=1000){
+  count <- 0 
+  for (i in (1:M)){
+    x <- typ_I(t0,theta,n)
+    r <- sum(x$delta)
+    pv <- IW(x,t0,r,theta0,"two.sided")
+    if (pv<= alpha){
+      count = count +1
+    }
+  }
+  return(count/M)
+}
+theta0 <- 3 
+theta_list <- c(0.5,1,1.5,2,2.5,3,3.5,4,4.5,5,5.5)
+n20 <- numeric(length(theta_list))
+n50 <- numeric(length(theta_list))
+for (i in 1:length(theta_list)){
+  n20[i] <- symulacja_moc(theta_list[i],theta0,20,0.5)
+  n50[i] <- symulacja_moc(theta_list[i],theta0,50,0.5)
+}
+  
+
+df <- data.frame(
+  theta = rep(theta_list, 2),
+  moc = c(n20, n50),
+  n = factor(rep(c(20, 50), each=length(theta_list)))
+)
+
+ggplot(df, aes(x=theta, y=moc, color=n, shape=n)) +
+  geom_line(linewidth=1) +
+  geom_point(size=3) +
+  geom_hline(yintercept=0.05, linetype="dashed", color="gray40") +
+  geom_vline(xintercept=theta0, linetype="dashed", color="gray40") +
+  annotate("text", x=max(theta_list)-0.3, y=0.1, label='alpha=0.05',
+           color="gray30", size=4, hjust=1) +
+  annotate("text", x=theta0+0.4, y=0.9, label='theta_0 = 3',
+           color="gray30", size=4, angle=90, vjust=-0.5) +
+  scale_color_manual(values=c("lightblue", "darkblue")) +
+  labs(title="Krzywe mocy testu ilorazu wiarygodności",
+       x='theta', y="Moc testu",
+       color="Wielkość próby", shape="Wielkość próby") +
+  theme_minimal(base_size=14)
+
+rozmiar_20 <- symulacja_moc(theta0,theta0,20,0.5,0.05, M=1000)
+rozmiar_50 <- symulacja_moc(theta0,theta0,50,0.5,0.05, M=1000)
+
+
+```
+
+Można zaobserwować, że wraz z oddalaniem się od naszego $\theta_0$ moc testu rośnie, a dla $\theta = \theta_0$ empiryczny rozmiar testu jest zbliżony do nominalnego poziomu $\alpha$ i wynosi dla $n = 20$: `r rozmiar_20` oraz dla $n = 50$: `r rozmiar_50`. Dodatkowo możemy zauważyć, że wraz ze wzrostem liczebności próby moc testu również rośnie.
+
+## Zadanie 3 - Zadanie praktyczne
+
+Zakładamy, że $\alpha$=0.05.
+Korzystając z wcześniej napisanej funkcji IW, liczymy p-value dla danych pochodzących z listy 2. z zadania 3. Weryfikujemy hipotezę, że średni czas do remisji w grupie A i B wynosi 1.
+
+```{r, warning=FALSE, echo=FALSE}
+## dane z zad.3 listy 2
+#R=10
+n=20
+t0=1
+delta=numeric(n)
+grupa_A <- numeric(n)
+grupa_B <- numeric(n)
+
+grupa_A[1:10] <- c(0.03345514, 0.08656403, 0.08799947, 0.24385821, 0.27755032,
+0.40787247, 0.58825664, 0.64125620, 0.90679161, 0.94222208)
+
+grupa_B[1:10] <- c(0.03788958, 0.12207257, 0.20319983, 0.24474299, 0.30492413,
+0.34224462, 0.42950144, 0.44484582, 0.63805066, 0.69119721)
+
+## cenzurowanie I-go typu
+
+grupa_A[11:20] <- t0
+grupa_B[11:20] <- t0
+
+delta_A <- c(rep(1, 10), rep(0, 10))
+delta_B <- c(rep(1, 10), rep(0, 10))
+
+dane_A <- data.frame(czas = grupa_A, delta = delta_A)
+dane_B <- data.frame(czas = grupa_B, delta = delta_B)
+```
+
+```{r}
+p1 <- round(IW(dane_A,1,10,1,"two.sided"),2)
+p2 <- round(IW(dane_B,1,10,1,"two.sided"),2)
+```
+
+Otrzymaliśmy wyniki p=`r p1` dla grupy A oraz p=`r p2` dla grupy B. Przy założeniu ustalonej $\alpha$ p>0.05 dla obu przypadków. Zatem nie ma podstaw do odrzucenia hipotezy ani w grupie A, ani w grupie B.
+

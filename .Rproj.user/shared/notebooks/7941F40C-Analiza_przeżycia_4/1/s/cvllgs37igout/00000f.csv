@@ -1,0 +1,8 @@
+"0",""
+"0","L <- function(x, t0, r, theta) {"
+"0","  n <- length(x$czas)"
+"0","  return (factorial(n) / factorial(n - r) * theta^r *"
+"0","           exp(-theta * (sum(x$czas[1:r]) + t0 * (n - r))))"
+"0","}"
+"0",""
+"0",""

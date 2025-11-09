@@ -1,0 +1,157 @@
+# Poprawiona funkcja IW (poprawiony T1 i logika testów jednostronnych)
+L <- function(x, t0, r, theta) {
+  n <- length(x$czas)
+  # Obliczanie T1 powinno być na zewnątrz, ale dla pewności możemy użyć sum(x$czas)
+  T1 <- sum(x$czas) 
+  
+  # Zwracamy tylko rdzeń funkcji wiarygodności (część z factorials się skraca w ilorazie)
+  # return (factorial(n) / factorial(n - r) * theta^r * exp(-theta * T1))
+  # Użycie log-wiarygodności jest stabilniejsze numerycznie, ale trzymając się Twojego kodu:
+  # Unikajmy 0^0, chociaż R sobie z tym radzi (daje 1)
+  if (theta == 0 && r == 0) {
+    return(exp(-theta * T1)) # lub po prostu 1
+  }
+  if (theta == 0 && r > 0) {
+    return(0)
+  }
+  return (theta^r * exp(-theta * T1))
+}
+
+IW <- function(x, t0, r, theta0, type) {
+  n <- length(x$czas)
+  
+  # POPRAWKA 1: Poprawne obliczenie T1
+  T1 <- sum(x$czas)
+  
+  # Jeśli r=0, MLE t=0. 
+  # Jeśli T1=0 (wszystkie czasy 0), a r>0, MLE jest nieskończone. Rzadki przypadek.
+  if (T1 == 0) {
+    if (r > 0) return(0) # Odrzucamy H0 (p-value=0)
+    if (r == 0) return(1) # Nie ma danych, nie odrzucamy H0
+  }
+  
+  t <- r / T1 # MLE dla współczynnika (rate)
+  
+  mianownik <- L(x, t0, r, t)
+  
+  # Jeśli mianownik jest 0 (np. r>0 i T1=0 da t=Inf), unikamy dzielenia przez 0
+  if (mianownik == 0) {
+    # Jeśli licznik też 0, lambda=1 (nieokreślone), G=0, p=1
+    # Jeśli licznik > 0, lambda=Inf, G=Inf, p=0
+    if (L(x, t0, r, theta0) > 0) return(0) 
+    else return(1)
+  }
+  
+  if (type == "two.sided") {
+    licznik = L(x, t0, r, theta0)
+  }
+  if (type == "greater") { # H_A: theta > theta0
+    # POPRAWKA 2: Poprawna logika testu
+    if (t <= theta0) { # MLE jest w H0
+      licznik = mianownik # L(t)
+    } else { # MLE jest w HA
+      licznik = L(x, t0, r, theta0) # L(theta0)
+    }
+  }
+  if (type == "less") { # H_A: theta < theta0
+    # POPRAWKA 2: Poprawna logika testu
+    if (t >= theta0) { # MLE jest w H0
+      licznik = mianownik
+    } else { # MLE jest w HA
+      licznik = L(x, t0, r, theta0)
+    }
+  }
+  
+  lambda = licznik / mianownik
+  # Zabezpieczenie przed lambda > 1 (błędy numeryczne)
+  if (lambda > 1) lambda <- 1 
+  
+  G = -2 * log(lambda)
+  return(1 - pchisq(G, 1))
+}
+
+# Poprawiona funkcja typ_I (usunięta pętla while)
+typ_I <- function(t0, theta, n) {
+  # theta to ŚREDNIA
+  X <- rexp(n, 1 / theta) 
+  delta <- numeric(n)
+  
+  for (i in 1:n) {
+    if (X[i] > t0) {
+      X[i] <- t0 # Cenzurujemy czas
+      delta[i] <- 0
+    } else {
+      delta[i] <- 1
+    }
+  }
+  
+  # Sortowanie nie jest konieczne dla T1 = sum(x$czas), ale nie szkodzi
+  dane <- data.frame(czas = X, delta = delta)
+  dane <- dane[order(dane$czas), ]
+  
+  return(dane)
+}
+
+# Poprawiona funkcja symulacja_moc (przekazuje 1/theta0 do IW)
+symulacja_moc <- function(theta, theta0, n, t0, alpha = 0.05, M = 100) {
+  # theta = prawdziwa ŚREDNIA
+  # theta0 = hipotetyczna ŚREDNIA
+  count <- 0
+  for (i in (1:M)) {
+    x <- typ_I(t0, theta, n)
+    r <- sum(x$delta)
+    
+    # Jeśli r=0, nie da się obliczyć MLE (t=0). 
+    # Funkcja IW powinna to obsłużyć.
+    if (r == 0) {
+      # Jeśli r=0, MLE t=0. Testujemy H0: lambda=1/theta0 vs HA: lambda != 1/theta0
+      # W IW: t=0. mianownik = L(..., 0). licznik = L(..., 1/theta0)
+      # To powinno działać.
+    }
+    
+    # POPRAWKA 3: Przekazujemy do IW hipotetyczny WSPÓŁCZYNNIK (1/theta0)
+    pv <- IW(x, t0, r, theta0, "two.sided") 
+    
+    if (is.na(pv)) next # Pomiń iterację jeśli p-value jest NA
+    
+    if (pv <= alpha) {
+      count = count + 1
+    }
+  }
+  return(count / M)
+}
+
+# --- Uruchomienie symulacji ---
+set.seed(123) # Dla powtarzalności wyników
+
+# Test błędu typu I (powinien być bliski 0.05)
+# Prawdziwa średnia = 1, H0 średnia = 1
+print(paste("Test bledu typu I (n=10):", symulacja_moc(1, 1, 10, 0.5, M=1000)))
+
+# Test błędu typu I (n=50)
+print(paste("Test bledu typu I (n=50):", symulacja_moc(3, 3, 50, 0.5, M=1000)))
+
+
+n_list <- c(20, 50)
+theta0 <- 3 # H0: średnia = 3
+theta_list <- c(0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5)
+
+for (n in n_list) {
+  cat(paste("\n--- Symulacja dla n =", n, "---\n"))
+  wyniki_mocy <- numeric(length(theta_list))
+  i <- 1
+  for (theta in theta_list) {
+    # Prawdziwa średnia = theta, H0 średnia = theta0
+    moc <- symulacja_moc(theta, theta0, n, 0.5, M=1000) # Zwiększyłem M dla lepszej dokładności
+    wyniki_mocy[i] <- moc
+    cat(paste("theta =", theta, ", moc =", moc, "\n"))
+    i <- i + 1
+  }
+  
+  # Wykres mocy
+  plot(theta_list, wyniki_mocy, type="b", 
+       main=paste("Moc testu (n=", n, ", t0=0.5, H0: theta=3)"),
+       xlab="Prawdziwa średnia (theta)", ylab="Moc (odsetek odrzuceń)")
+  abline(h = 0.05, col="red", lty=2) # Poziom istotności
+  abline(v = theta0, col="blue", lty=2) # Hipoteza zerowa
+}
