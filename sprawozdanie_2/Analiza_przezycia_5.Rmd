@@ -176,7 +176,7 @@ Na powyższych wykresach możemy zobaczyć wartości estymatora K-M z ogonem dla
 
 ## Zadanie 3 - oszacowanie wartości funkcji przeżycia 
 
-W ramach zadania przeprowadzono symulację Monte Carlo, generując $M=1000$ prób cenzurowanych I-go typu z uogólnionego rozkładu wykładniczego $GE(\lambda, \alpha)$ dla wybranych wartości parametrów $\alpha = 4$ oraz $\lambda = 1$. Rozmiary prób wynosiły odpowiednio $n = 30, 50, 100$. Wartość $t_0$ przyjęto w przybliżeniu równą wartości oczekiwanej rozkładu, a następnie wyznaczono estymatory funkcji przeżycia w punktach $t_0$ oraz $2t_0$, korzystając z estymatora Kaplana–Meiera z tzw. ogonem estymowanym metodą Browna, Hollandera i Kowara.
+W ramach zadania przeprowadzono symulację, generując $M=1000$ prób cenzurowanych I-go typu z uogólnionego rozkładu wykładniczego $GE(\lambda, \alpha)$ dla wybranych wartości parametrów $\alpha = 4$ oraz $\lambda = 1$. Rozmiary prób wynosiły odpowiednio $n = 30, 50, 100$. Wartość $t_0$ przyjęto w przybliżeniu równą wartości oczekiwanej rozkładu, a następnie wyznaczono estymatory funkcji przeżycia w punktach $t_0$ oraz $2t_0$, korzystając z estymatora Kaplana–Meiera z tzw. ogonem estymowanym metodą Browna, Hollandera i Kowara.
 
 Dla każdego $n$ uzyskano 1000 estymacji wartości $\hat{S}(t_0)$ i $\hat{S}(2t_0)$, a ich rozkłady przedstawiono na histogramach poniżej.
 
