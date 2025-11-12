@@ -1,0 +1,102 @@
+---
+title: "Lista 5"
+author: "Olga Foriasz, Tomasz Warzecha"
+date: "2025-10-08"
+output:
+  pdf_document:
+    toc: true
+    fig_caption: true
+    fig_width: 5
+    fig_height: 4
+    number_sections: true
+  html_document:
+    toc: true
+    df_print: paged
+header-includes:
+- \usepackage[polish]{babel}
+- \usepackage[OT4]{polski}
+- \usepackage[T1]{fontenc}
+- \usepackage[utf8]{inputenc}
+- \usepackage{graphicx}
+- \usepackage{float}
+subtitle: Analiza przeżycia
+fontsize: 11pt
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+knitr::opts_chunk$set(fig.pos = "H", out.extra = "", fig.align = "center")
+
+```
+
+
+
+# lista 6
+
+## zad1
+
+```{r}
+library(survival)
+est <- function(t,km,t0){
+  return(exp(log(km)*t/t0))
+}
+
+
+sr_czas_KM <- function(dane,t0){
+  km_fit <- survfit(Surv(czas,delta)~1, dane)
+  bez_ogonu <- sum(diff(c(0,km_fit$time)) * c(1,km_fit$surv[-length(km_fit$surv)]))
+  ogon <- integrate(function(t) est(t, min(km_fit$surv), t0), 0, Inf)$value
+  w <- bez_ogonu + ogon
+  return(w)
+
+}
+
+sr_czas_FH <- function(dane,t0){
+  km_fit <- survfit(Surv(czas,delta)~1, dane, type= "fleming-harrington")
+  bez_ogonu <- sum(diff(c(0,km_fit$time)) * c(1,km_fit$surv[-length(km_fit$surv)]))
+  ogon <- integrate(function(t) est(t, min(km_fit$surv), t0), 0, Inf)$value
+  w <- bez_ogonu + ogon
+  return(w)
+
+}
+
+
+```
+## zad2
+
+```{r}
+n=20
+t0=1
+delta=numeric(n)
+grupa_A <- numeric(n)
+grupa_B <- numeric(n)
+
+grupa_A[1:10] <- c(0.03345514, 0.08656403, 0.08799947, 0.24385821, 0.27755032,
+0.40787247, 0.58825664, 0.64125620, 0.90679161, 0.94222208)
+
+grupa_B[1:10] <- c(0.03788958, 0.12207257, 0.20319983, 0.24474299, 0.30492413,
+0.34224462, 0.42950144, 0.44484582, 0.63805066, 0.69119721)
+
+## cenzurowanie I-go typu
+
+grupa_A[11:20] <- t0
+grupa_B[11:20] <- t0
+
+delta_A <- c(rep(1, 10), rep(0, 10))
+delta_B <- c(rep(1, 10), rep(0, 10))
+
+dane_A <- data.frame(czas = grupa_A, delta = delta_A)
+dane_B <- data.frame(czas = grupa_B, delta = delta_B)
+```
+
+
+```{r}
+sr_czas_KM(dane_A,1)
+sr_czas_FH(dane_A,1)
+
+sr_czas_KM(dane_B,1)
+sr_czas_FH(dane_B,1)
+```
+
