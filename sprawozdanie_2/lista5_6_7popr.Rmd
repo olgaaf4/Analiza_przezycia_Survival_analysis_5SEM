@@ -1,0 +1,446 @@
+---
+title: "Sprawozdanie 2"
+author: "Olga Foriasz, Tomasz Warzecha"
+date: "2025-10-08"
+output:
+  pdf_document:
+    toc: true
+    fig_caption: true
+    fig_width: 5
+    fig_height: 4
+    number_sections: true
+  html_document:
+    toc: true
+    df_print: paged
+header-includes:
+- \usepackage[polish]{babel}
+- \usepackage[OT4]{polski}
+- \usepackage[T1]{fontenc}
+- \usepackage[utf8]{inputenc}
+- \usepackage{graphicx}
+- \usepackage{float}
+subtitle: Analiza przeżycia
+fontsize: 11pt
+---
+
+
+```{r setup, echo=FALSE, include=FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+knitr::opts_chunk$set(fig.pos = "H", out.extra = "", fig.align = "center")
+library(knitr)
+library(kableExtra)
+```
+
+# Lista 5
+
+## Zadanie 1 - Analiza graficzna estymatorów funkcji przeżycia
+
+Celem zadania było graficzne przedstawienie i porównanie estymatorów funkcji przeżycia dla czasu do remisji choroby w grupach pacjentów leczonych lekiem A oraz lekiem B. Dane pobrano z zadania 3 z listy 2. Wykorzystano dwie metody nieparametryczne:
+
+a) Estymator Kaplana-Meiera (KM) 
+b) Estymator Fleminga-Harringtona (FH)
+
+W tym celu skorzystamy z funkcji $survfit()$ z pakietu $survival$.
+
+```{r , echo =FALSE}
+n=20
+t0=1
+delta=numeric(n)
+grupa_A <- numeric(n)
+grupa_B <- numeric(n)
+
+grupa_A[1:10] <- c(0.03345514, 0.08656403, 0.08799947, 0.24385821, 0.27755032,
+0.40787247, 0.58825664, 0.64125620, 0.90679161, 0.94222208)
+
+grupa_B[1:10] <- c(0.03788958, 0.12207257, 0.20319983, 0.24474299, 0.30492413,
+0.34224462, 0.42950144, 0.44484582, 0.63805066, 0.69119721)
+
+## cenzurowanie I-go typu
+
+grupa_A[11:20] <- t0
+grupa_B[11:20] <- t0
+
+delta_A <- c(rep(1, 10), rep(0, 10))
+delta_B <- c(rep(1, 10), rep(0, 10))
+
+dane_A <- data.frame(czas = grupa_A, delta = delta_A)
+dane_B <- data.frame(czas = grupa_B, delta = delta_B)
+```
+
+```{r, echo =FALSE}
+
+## zostawione dla historii
+KM <- function(t,dane){
+    n <- length(dane)
+    i <- 1
+    iloczyn <- 1
+    while (i <= n && dane$czas[i] <= t) {
+      iloczyn = iloczyn *(1-dane$delta[i]/(n-i+1))
+      i=i+1
+    }
+    return(iloczyn)
+}
+
+``` 
+```{r, echo =FALSE}
+library(survival)
+
+km_fit_a <- survfit(Surv(czas,delta)~1, dane_A)
+result_km_a <- data.frame(time = km_fit_a$time, surv = km_fit_a$surv)
+
+km_fit_b <- survfit(Surv(czas,delta)~1, dane_B)
+result_km_b <- data.frame(time = km_fit_b$time, surv = km_fit_b$surv)
+
+
+plot(km_fit_a, col = "darkblue",conf.int = FALSE, lwd = 2, 
+     xlab = "Czas", ylab = "Prawdopodobieństwo przeżycia", 
+     main = "Estymator Kaplana-Meiera dla grup A i B",
+     xlim = c(0, 1))
+lines(km_fit_b, col = "lightblue",conf.int = FALSE, lwd = 2)
+legend("topright",
+       legend = c("Grupa A", "Grupa B"),
+       col = c("darkblue", "lightblue"),
+       lwd = 2)
+```
+Na powyższym wykresie widzimy estymator Kaplana-Meinera dla grup A i B. 
+
+Teraz wyznaczmy sobie estymator Fleminga-Harringtona:
+```{r, echo =FALSE}
+fh_fit_a <- survfit(Surv(czas,delta)~1, dane_A, type = "fleming-harrington")
+result_fh_a <- data.frame(time = fh_fit_a$time, surv = fh_fit_a$surv)
+
+fh_fit_b <- survfit(Surv(czas,delta)~1, dane_B, type = "fleming-harrington")
+result_fh_b <- data.frame(time = fh_fit_b$time, surv = fh_fit_b$surv)
+
+plot(fh_fit_a, conf.int = FALSE, col = "darkblue", lwd = 2, 
+     xlab = "Czas", ylab = "Prawdopodobieństwo przeżycia", 
+     main = "Estymator Fleminga-Harringtona dla grup A i B",
+     xlim = c(0, 1))
+lines(fh_fit_b,conf.int = FALSE, col = "lightblue", lwd = 2)
+legend("topright",
+       legend = c("Grupa A", "Grupa B"),
+       col = c("darkblue", "lightblue"),
+       lwd = 2)
+```
+Na powyższym wykresie widzimy estymator Fleminga-Harringtona dla grup A i B. Zarówno wykres estymatora Kaplana-Meiera, jak i Fleminga-Harringtona, są wizualnie niemal identyczne i prowadzą do tych samych wniosków. 
+
+Na podstawie wykresów estymatorów Kaplana–Meiera można zauważyć, że krzywe przeżycia dla grup A i B mają zbliżony przebieg. Początkowo wartości funkcji przeżycia są prawie identyczne, natomiast w środkowym zakresie czasów (około 0.3-0.7) krzywa dla grupy B przebiega nieco niżej, co sugeruje, że pacjenci leczeni lekiem B częściej osiągali remisję wcześniej niż pacjenci z grupy A. Ostatecznie jednak obie krzywe schodzą do podobnego poziomu, co wskazuje, że końcowy odsetek remisji w obu grupach jest zbliżony. Zatem na podstawie otrzymanych wykresów można przypuszczać, że leki A i B wykazują podobne działanie, przy czym lek B może powodować nieco szybsze wystąpienie remisji we wcześniejszym okresie obserwacji.
+
+
+## Zadanie 2 - Tworzenie wykresu estymatora Kaplana-Meiera z “ogonem”
+
+Na początku stworzymy sobie funkcję do tworzenia wykresu estymatora Kaplana-Meiera z “ogonem”
+estymowanym zgodnie z propozycją Browna, Hollandera i Kowara. W tym celu na początku wyznaczymy sobie estymator Kaplana-Meiera za pomocą funkcji $survfit()$ dla $t \in (0, t^+]$, następnie dla $t \in (t^+, 2t^+)$ wyznaczymy sobie "ogon" naszego estymatora za pomocą wzoru:
+$$
+\hat{S}(t) = \exp \left[ \frac{\ln \hat{S}(t^+)}{t^+} t \right],
+$$
+
+```{r}
+
+est <- function(time,km,t0){
+  y <- numeric(length(time))
+  i <- 1
+  for (t in time){
+    y[i] <- exp(log(min(km))*t/t0)
+    i = i+1
+  }
+  return(y)
+}
+
+wykres <- function(dane,t0,nazwa_wykresu){
+  km_fit <- survfit(Surv(czas,delta)~1, dane)
+  ogonx <- seq(from = (t0), to = 2*t0, by = 0.1)
+  ogony <- est(ogonx,km_fit$surv,t0)
+  plot(km_fit, col = "darkblue",conf.int = FALSE,
+       xlab = "Czas", ylab = "Prawdopodobieństwo przeżycia", 
+       main = nazwa_wykresu,
+       xlim = c(0, t0*2))
+  lines(ogony, col = "lightblue", lwd = 2)
+  legend("topright",
+         legend = c("Estymator KM", "'ogon'"),
+         col = c("darkblue", "lightblue"),
+         lwd = 2)
+}
+```
+
+Teraz mając funkcję tworzącą wykresy, narysujemy sobie wykres naszego estymatora dla danych z zad.3 z listy 2. 
+
+```{r, fig.width=8, fig.height=4}
+
+par(mfrow = c(1,2))
+wykres(dane_A,1,"Estymator KM z ogonem dla gr. A")
+
+wykres(dane_B,1,"Estymator KM z ogonem dla gr. B")
+```
+Na powyższych wykresach możemy zobaczyć wartości estymatora K-M z ogonem dla grupy A i B. Jak widać powyższe wykresy znacznie się nie różnią, ogon estymatora Kaplana–Meiera pokazuje dalszy spadek funkcji przeżycia po ostatnich zaobserwowanych zdarzeniach, co oznacza, że prawdopodobieństwo przeżycia (braku remisji) nadal maleje w miarę upływu czasu, mimo braku nowych obserwacji zdarzeń.  
+
+## Zadanie 3 - Oszacowanie wartości funkcji przeżycia 
+
+W ramach zadania przeprowadzono symulację, generując $M=1000$ prób cenzurowanych I-go typu z uogólnionego rozkładu wykładniczego $GE(\lambda, \alpha)$ dla wybranych wartości parametrów $\alpha = 4$ oraz $\lambda = 1$. Rozmiary prób wynosiły odpowiednio $n = 30, 50, 100$. Wartość $t_0$ przyjęto w przybliżeniu równą wartości oczekiwanej rozkładu, a następnie wyznaczono estymatory funkcji przeżycia w punktach $t_0$ oraz $2t_0$, korzystając z estymatora Kaplana–Meiera z tzw. ogonem estymowanym metodą Browna, Hollandera i Kowara.
+
+Dla każdego $n$ uzyskano 1000 estymacji wartości $\hat{S}(t_0)$ i $\hat{S}(2t_0)$, a ich rozkłady przedstawiono na histogramach poniżej.
+
+```{r , fig.width=6, fig.height=3}
+typ_I <- function(t0, alfa, lambda, n){
+  p <- runif(n)
+  X<-numeric(n)
+  delta <-numeric(n)
+  for(i in 1:n){
+  X[i]=(-(1/lambda))*log(1-(p[i])^(1/alfa))
+  if(X[i]>t0){
+    X[i] <- t0
+    delta[i] <- 0
+  }else{delta[i]<-1}}
+  return(data.frame(X = X, delta = delta))
+}
+est <- function(time,km,t0){
+  y <- numeric(length(time))
+  i <- 1
+  for (t in time){
+    y[i] <- exp(log(min(km))*t/t0)
+    i = i+1
+  }
+  return(y)
+}
+est_KM_ogon <- function(dane,t0){
+  km_fit <- survfit(Surv(X,delta)~1, dane)
+  ogonx <- seq(from = (t0+0.1), to = 2*t0, by = 0.1)
+  ogony <- est(ogonx,km_fit$surv,t0)
+  fy <- c(km_fit$surv, ogony)
+  fx <- c(km_fit$time, ogonx)
+  funkcja <- data.frame(x = fx, y = fy)
+  xt0 <- funkcja$y[funkcja$x == t0]
+  x2t0 <- funkcja$y[funkcja$x == 2*t0]
+  return(c(xt0,x2t0))
+  
+}
+par(mfrow = c(1,2))
+
+histogramy <- function(alfa,lambda,t0,m,n_list){
+  for(n in n_list){
+    st0 <- numeric(m)
+    s2t0 <- numeric(m)
+    for(i in (1:m)){
+      dane <- typ_I(t0,alfa,lambda,n)
+      s <- est_KM_ogon(dane,t0)
+      st0[i]<- s[1]
+      s2t0[i]<- s[2]
+    }
+    hist(st0, col = "lightblue", 
+         main = paste("n =", n, " | Estymator S(t0)"), 
+         xlab = "Wartość S(t0)")
+    hist(s2t0, col = "aquamarine",
+         main = paste("n =", n, " | Estymator S(2 * t0)"), 
+         xlab = "Wartość S(2 * t0)")
+  }
+}
+n_list <- c(30,50,100)
+alfa <- 4
+lambda <- 1
+t0 <- sqrt(alfa)/lambda
+m <- 1000
+
+histogramy(alfa,lambda,t0,m,n_list)
+```
+
+Na podstawie uzyskanych histogramów zauważono, że wraz ze wzrostem liczby obserwacji rozkłady estymatora Kaplana–Meiera stają się coraz bardziej symetryczne i skupione wokół wartości średniej. Dla małych prób (n = 30) rozkłady są bardziej rozproszone i lekko skośne, natomiast dla większych prób (n = 100) przypominają rozkład normalny. Oznacza to, że wraz ze wzrostem liczby danych zmienność estymatora maleje, a jego rozkład zbliża się do rozkładu normalnego.
+
+Dodatkowo można zauważyć, że wartości estymatora w punkcie $2t_0$ są niższe niż w punkcie $t_0$, co jest zgodne z interpretacją funkcji przeżycia — prawdopodobieństwo „przeżycia” (braku zdarzenia) maleje wraz z upływem czasu. 
+
+Wyniki te potwierdzają przypuszczenie, że estymator Kaplana–Meiera ma własność asymptotycznej normalności zarówno w punkcie $t_0$, jak i $2t_0$.
+
+# lista 6
+
+## Zadanie 1
+
+Na początku zdefiniowano funkcję potrzebną do deklaracji programów estymacji średniego czasu życia w opraciu o dwa estymatory.
+
+```{r, warning=FALSE}
+library(survival)
+est <- function(t,km,t0){return(exp(log(km)*t/t0))}
+```
+
+## Zadanie 1a - Program do estymacji średniego czasu życia - estymator Kaplana-Meiera 
+
+W zadaniu zadeklarowano funkcję do estymacji średniego czasu życia w oparciu o estymator Kaplana-Meiera z opcją szacowania ogona zaproponowaną przez Browna, Hollandera i Kowara (ogona wykładniczego). 
+
+```{r KM, warning=FALSE}
+sr_czas_KM <- function(dane,t0){
+  km_fit <- survfit(Surv(czas,delta)~1, dane)
+  bez_ogonu <- sum(diff(c(0,km_fit$time))*c(1,km_fit$surv[-length(km_fit$surv)]))
+  ogon <- integrate(function(t) est(t, min(km_fit$surv), t0), t0, Inf)$value
+  w <- bez_ogonu + ogon
+  return(w)
+}
+```
+
+## Zadanie 1b - Program do estymacji średniego czasu życia - estymator Fleminga-Harringtona
+
+W drugiej części natomiast zadeklarowano funkcję do estymacji średniego czasu życia w oparciu o estymator Fleminga-Harringtona z opcją szacowania ogona zaproponowaną przez Browna, Hollandera i Kowara (ogona wykładniczego).
+
+
+```{r FH, warning=FALSE}
+sr_czas_FH <- function(dane,t0){
+  km_fit <- survfit(Surv(czas,delta)~1, dane, type= "fleming-harrington")
+  bez_ogonu <- sum(diff(c(0,km_fit$time))*c(1,km_fit$surv[-length(km_fit$surv)]))
+  ogon <- integrate(function(t) est(t, min(km_fit$surv), t0), t0, Inf)$value
+  w <- bez_ogonu + ogon
+  return(w)
+}
+```
+
+## Zadanie 2 - Porównanie estymatorów
+
+W zadaniu zawarte są dane pochodzące z 3-go zadania z listy 2. Dotyczyczą one czasu do otrzymania w remisji w badanej grupie A oraz B.
+
+```{r, echo=FALSE}
+n=20
+t0=1
+delta=numeric(n)
+grupa_A <- numeric(n)
+grupa_B <- numeric(n)
+
+grupa_A[1:10] <- c(0.03345514, 0.08656403, 0.08799947, 0.24385821, 0.27755032,
+0.40787247, 0.58825664, 0.64125620, 0.90679161, 0.94222208)
+
+grupa_B[1:10] <- c(0.03788958, 0.12207257, 0.20319983, 0.24474299, 0.30492413,
+0.34224462, 0.42950144, 0.44484582, 0.63805066, 0.69119721)
+
+## cenzurowanie I-go typu
+
+grupa_A[11:20] <- t0
+grupa_B[11:20] <- t0
+
+delta_A <- c(rep(1, 10), rep(0, 10))
+delta_B <- c(rep(1, 10), rep(0, 10))
+
+dane_A <- data.frame(czas = grupa_A, delta = delta_A)
+dane_B <- data.frame(czas = grupa_B, delta = delta_B)
+```
+
+Korzystając z wcześniej napisanych funkcji, obliczono średni czas życia dla grupy A oraz B.
+
+```{r}
+KM_A<-sr_czas_KM(dane_A,1)
+FH_A<-sr_czas_FH(dane_A,1)
+
+KM_B<-sr_czas_KM(dane_B,1)
+FH_B<-sr_czas_FH(dane_B,1)
+
+tabela <- data.frame(
+  dane_A = c(KM_A, FH_A),
+  dane_B = c(KM_B, FH_B),
+  row.names = c("estymator KM", "estymator FH")
+)
+
+kable(tabela, format = "latex", 
+      booktabs = TRUE, caption = "Porównanie estymatorów") %>%
+kable_styling(latex_options = c("hold_position"))
+```
+
+Korzystając z funkcji otrzymano wynik estymatora Kaplana - Meiera wynoszący `r KM_A` dla grupy A oraz `r KM_B` dla grupy B. Natomiast esytmator Fleminga - Harringtona uzyskał wynik równy `r FH_A` dla grupy A oraz `r FH_B` dla grupy B.Estymatory Kaplana-Meiera (KM) i Fleming-Harrington (FH) dają zbliżone wartości średniego czasu przeżycia. Estymator FH nieznacznie przewyższa KM, co może wynikać z większego wpływu późniejszych zdarzeń.
+
+# Lista 7
+
+## Zadanie 1 - Deklaracja funkcji
+
+W celu zwiększenia czytelności kodu i lepszego zrozumienia poszczególnych etapów obliczeń, główna funkcja została zbudowana w oparciu o niżej zdefiniowane funkcje pomocnicze.
+
+```{r, echo=TRUE}
+
+estymator_Kaplana_Meiera <- function(t, dane) {
+  dane <- dane[order(dane$czas), ]
+  n <- nrow(dane)
+  if (length(t) > 1) {
+    return(sapply(t, function(tt) estymator_Kaplana_Meiera(tt, dane)))
+  }
+  iloczyn <- 1
+  for (i in 1:n) {
+    if (dane$czas[i] <= t) {
+      iloczyn <- iloczyn * (1 - dane$delta[i] / (n - i + 1))
+    } else break
+  }
+  return(iloczyn)
+}
+
+library(survival)
+est <- function(t,km,t0){return(exp(log(km)*t/t0))}
+
+estymator_punktowy <- function(dane,t_plus,tau){
+  km_fit <- survfit(Surv(czas,delta)~1, dane)
+  bez_ogonu <- sum(diff(c(0,km_fit$time))*c(1,km_fit$surv[-length(km_fit$surv)]))
+  ogon <- (tau - t_plus) * km_fit$surv[length(km_fit$surv)]
+  w <- bez_ogonu + ogon
+  return(w)
+}
+```
+
+W zadaniu zdefiniowano funkcję służącą do estymacji przedziału ufności przy zadanym poziomie ufności 1 - $\alpha$. 
+
+```{r, echo=TRUE}
+estymator_przedzialowy <- function(dane, alfa){
+  
+  # dane przekształcone na ramkę danych, kolmuny: czas, delta
+  czas <- numeric(length(dane))
+  delta <- numeric(length(dane))
+  for (i in 1:length(dane)) {
+    if (grepl("\\+$", dane[i])) {  
+      czas[i] <- as.numeric(sub("\\+$", "", dane[i])) 
+      delta[i] <- 0
+    } else {
+      czas[i] <- as.numeric(dane[i])
+      delta[i] <- 1
+    }
+  }
+  dane_ramka <- data.frame(czas = czas, delta = delta)
+  dane_ramka <- dane_ramka[order(dane_ramka$czas), ]
+  
+  km_fit <- survfit(Surv(czas, delta)~1,data=dane_ramka)
+  censor <- km_fit$n.event>0
+  d <- km_fit$n.event[censor==TRUE]
+  r <- km_fit$n.risk[censor==TRUE]
+  czasy <- km_fit$time[censor==TRUE]
+  tau=1500
+  t_plus <- max(km_fit$time)
+  
+  czasy_unikalne <- unique(km_fit$time[km_fit$n.event > 0])
+  D <- length(czasy_unikalne)
+  
+  V=0
+  for(i in 1:D){
+      V <- V + (integrate(function(t) estymator_Kaplana_Meiera(t, dane_ramka),
+                 lower = czasy_unikalne[i], upper = tau)$value)^2 * d[i]/(r[i]*(r[i]-d[i]))} 
+  
+  mi_tau <- estymator_punktowy(dane_ramka,t_plus,tau)
+  T_L = mi_tau - qnorm(1-alfa/2)*sqrt(V)
+  T_U = mi_tau + qnorm(1-alfa/2)*sqrt(V)
+  return(c(T_L,T_U))
+}
+```
+
+\newpage
+## Zadanie 2 - Zadanie praktyczne
+
+Następnie dla danych zadeklarowanych pozniżej oszacowaliśmy realizację przedziałów ufności.
+
+```{r}
+pacjentki_niski_stopien <- c("28", "89", "175", "195", "309", 
+                             "377+", "393+", "421+", "447+",
+                             "462", "709+", "744+", "770+", 
+                             "1106+", "1206+")
+
+pacjentki_wysoki_stopien <- c("34", "88", "137", "199", "280",
+                              "291", "299+", "300+", "309",
+                              "351", "358", "369", "369", "370", 
+                              "375", "382", "392",
+                              "429+", "451", "1119+")
+
+P1 <- round(estymator_przedzialowy(pacjentki_niski_stopien, alfa=0.05),2)
+P2 <- round(estymator_przedzialowy(pacjentki_wysoki_stopien, alfa=0.05),2)
+P1
+P2
+```
+Dla grupy pacjentek z niskim stopniem zaawansowania choroby realizacja przedziału ufności na poziomie ufności 1 - $\alpha$ dla $\alpha$=0.05 była następująca: [`r P1`]. Natomiast dla grupy pacjentek z wysokim stopniem zaawansowania realizacja przedziału ufności była równa: [`r P2`]
+
+Analizując przedziały ufności dla pacjentek z niskim i wysokim stopniem zaawansowania choroby, zauważamy wyraźne różnice. Dla grupy pacjentek z niskim stopniem zaawansowania przedział ufności wynosił od `r P1[1]` do `r P1[2]`, natomiast dla grupy pacjentek z wysokim stopniem zaawansowania przedział ufności wynosił od `r P2[1]` do `r P2[2]`. Można zauważyć, że przedział ufności dla grupy z wyższym stopniem zaawansowania jest węższy, co oznacza większą precyzję estymacji funkcji przeżycia. Natomiast w grupie z niskim stopniem zaawansowania przedział jest szerszy, co wskazuje na większą niepewność szacowania średniego czasu przeżycia w tej grupie. Wnioski płynące z analizy są takie, że pacjentki z niskim stopniem zaawansowania choroby charakteryzują się większą zmiennością czasu przeżycia w badanej próbie, co powoduje szerszy przedział ufności, natomiast pacjentki z wysokim stopniem zaawansowania choroby mają bardziej jednorodny czas przeżycia w próbie, co skutkuje węższym przedziałem ufności i większą precyzją estymacji.
+
