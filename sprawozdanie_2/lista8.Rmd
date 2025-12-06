@@ -1,0 +1,170 @@
+---
+title: "Lista 8"
+author: "Olga Foriasz, Tomasz Warzecha"
+date: "2025-10-08"
+output:
+  pdf_document:
+    toc: true
+    fig_caption: true
+    fig_width: 5
+    fig_height: 4
+    number_sections: true
+  html_document:
+    toc: true
+    df_print: paged
+header-includes:
+- \usepackage[polish]{babel}
+- \usepackage[OT4]{polski}
+- \usepackage[T1]{fontenc}
+- \usepackage[utf8]{inputenc}
+- \usepackage{graphicx}
+- \usepackage{float}
+subtitle: Analiza przeżycia
+fontsize: 11pt
+---
+
+
+```{r setup, echo=FALSE, include=FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+knitr::opts_chunk$set(fig.pos = "H", out.extra = "", fig.align = "center")
+library(knitr)
+library(kableExtra)
+```
+
+# Lista 8 
+
+## Zadanie 1 - Weryfikacja hipotezy o jednakowym rozkładzie czasu do progresji choroby
+
+W tym zadaniu na podstawie danych opisanych w zadaniu 2 na liście 7, na poziomie istotności 0.05, zweryfikujemy hipotezę o jednakowym rozkładzie czasu do progresji choroby w dwóch badanych grupach pacjentek, korzystając z testu log-rank, Gehana-Breslowa, Tarone’a-Warego, Peto-Peto. W tym celu użyjemy funkcji $longrank\_test()$ z pakietu $coin$
+
+```{r}
+pacjentki_niski_stopien <- c("28", "89", "175", "195", "309", 
+                             "377+", "393+", "421+", "447+",
+                             "462", "709+", "744+", "770+", 
+                             "1106+", "1206+")
+
+pacjentki_wysoki_stopien <- c("34", "88", "137", "199", "280",
+                              "291", "299+", "300+", "309",
+                              "351", "358", "369", "369", "370", 
+                              "375", "382", "392",
+                              "429+", "451", "1119+")
+
+pacjentki_all <- c(pacjentki_niski_stopien,pacjentki_wysoki_stopien)
+ramka_grupa<- function(dane,k,m){
+  # dane przekształcone na ramkę danych, kolmuny: grupa,czas, delta
+  czas <- numeric(length(dane))
+  delta <- numeric(length(dane))
+  for (i in 1:length(dane)) {
+    if (grepl("\\+$", dane[i])) {  
+      czas[i] <- as.numeric(sub("\\+$", "", dane[i])) 
+      delta[i] <- 0
+    } else {
+      czas[i] <- as.numeric(dane[i])
+      delta[i] <- 1
+    }
+  }
+  grupa <- factor(rep(c("Niski","Wysoki"), times = c(k,m)))
+  dane_ramka <- data.frame(grupa= grupa, czas = czas, delta = delta)
+  dane_ramka <- dane_ramka[order(dane_ramka$czas), ]
+
+}
+dane <- ramka_grupa(pacjentki_all, length(pacjentki_niski_stopien), length(pacjentki_wysoki_stopien))
+
+
+```
+```{r , echo = TRUE}
+library(coin)
+logrank_test <- logrank_test(Surv(czas,delta)~grupa,data=dane,type='logrank')
+gehan_breslow_test <- logrank_test(Surv(czas,delta)~grupa,data=dane,type='Gehan-Breslow')
+tarone_ware_test <- logrank_test(Surv(czas,delta)~grupa,data=dane,type='Tarone-Ware')
+peto_peto_test <- logrank_test(Surv(czas,delta)~grupa,data=dane,type='Peto-Peto')
+```
+```{r}
+p_logrank <- pvalue(logrank_test)
+p_gehan <- pvalue(gehan_breslow_test)
+p_tarone <- pvalue(tarone_ware_test)
+p_peto <- pvalue(peto_peto_test)
+wyniki_tabela <- data.frame(
+  Test = c("Log-Rank", "Gehan-Breslow", "Tarone-Ware", "Peto-Peto"),
+  P_value = c(p_logrank, p_gehan, p_tarone, p_peto)
+)
+
+wyniki_tabela
+```
+
+Przy  poziomie istotności $\alpha = 0.05$ tylko test Log-Rank ($p = 0.0194$) daje wynik istotny, więc formalnie dla tego testu odrzucamy hipotezę zerową i stwierdzamy różnicę w przeżywalności między grupami. Pozostałe testy - Gehan-Breslow ($p = 0.1336$), Tarone-Ware ($p = 0.0552$) i Peto-Peto ($p = 0.0978$) — nie przekraczają progu 0.05 (Tarone-Ware jest blisko granicy), więc dla nich nie ma podstaw do odrzucenia hipotezy zerowej. 
+
+Różnice p-value wynikają z różnych schematów ważenia zdarzeń w czasie stosowanych przez te testy. Log-Rank waży wszystkie zdarzenia jednakowo i jest najbardziej czuły na sumaryczną różnicę między krzywymi (stąd niskie p). Gehan-Breslow bardziej faworyzuje zdarzenia występujące wcześnie w obserwacji (ma większą wagę, gdy jest dużo osób nadal w ryzyku), więc jeśli separacja krzywych występuje dopiero późno — jego p będzie większe. Tarone-Ware i Peto-Peto stosują pośrednie schematy wagowe, stąd wartości są pomiędzy Log-Rankiem a Gehanem-Breslowem. 
+
+## Zadanie 2 - Wykresy estymatorów KM oraz funkji wagowych
+
+W tym zadaniu również korzystamy z danych opisanych w zadaniu 2 na liście 7. Na początku narysujmy wykresy estymatorów Kaplana-Meiera funkcji przeżycia dla czasu do progrsji choroby w dwóch badanych podgrupach.
+
+```{r}
+wynik <- survfit(Surv(czas,delta)~grupa, data = dane)
+plot(wynik, main = "Wykresy estymatorów KM f. przeżycia dla czasu do progrsji choroby w dwóch podgrupach", col = c("lightblue","darkblue"),lwd = 0.3)
+```
+Na wykresie powyżej krzywe Kaplana–Meiera pokazują, że przez większą część obserwacji obie grupy mają bardzo podobne przeżycia, a wyraźna separacja pojawia się dopiero późno - jedna krzywa (ciemnoniebieska) gwałtownie opada po ok. 300 dniach, podczas gdy druga (jasnoniebieska) pozostaje stabilna. To dokładnie odzwierciedlają wykresy p-value dla kolejnych testów: test Log-Rank (ciemnozielony), który waży wszystkie zdarzenia jednakowo, jako jedyny wyraźnie spada poniżej progu 0.05, czyli jest czuły na późną separację krzywych, podczas gdy reszta testów bardziej ignoruje późniejsze zdarzenia. 
+
+
+Narysujmy teraz wykresy funkcji wagowych w statystykach testowych rozważanych w zadaniu 1. 
+```{r}
+ramka <- function(dane){
+  # dane przekształcone na ramkę danych, kolmuny: czas, delta
+  czas <- numeric(length(dane))
+  delta <- numeric(length(dane))
+  for (i in 1:length(dane)) {
+    if (grepl("\\+$", dane[i])) {  
+      czas[i] <- as.numeric(sub("\\+$", "", dane[i])) 
+      delta[i] <- 0
+    } else {
+      czas[i] <- as.numeric(dane[i])
+      delta[i] <- 1
+    }
+  }
+  dane_ramka <- data.frame(czas = czas, delta = delta)
+  dane_ramka <- dane_ramka[order(dane_ramka$czas), ]
+
+}
+
+dane <- ramka(pacjentki_all)
+km_fit <- survfit(Surv(czas,delta)~1, data=dane)
+cenz <- km_fit$n.event>0
+```
+```{r , echo = TRUE}
+czasy <- km_fit$time[cenz == TRUE]
+pstwa <- km_fit$surv[cenz==TRUE]
+r <- km_fit$n.risk[cenz==TRUE]
+
+d <- length(czasy)
+
+w_logrank <- rep(1, d)
+w_gehan_breslow <- r
+w_tarone_ware <- sqrt(r)
+w_peto_peto <- pstwa
+
+w_logrank_p <- rep(1, d)/sum(w_logrank)
+w_gehan_breslow_p <- r / sum(w_gehan_breslow)
+w_tarone_ware_p <- sqrt(r) / sum(w_tarone_ware)
+w_peto_peto_p <- pstwa / sum(w_peto_peto) 
+```
+```{r}
+#plot(czasy, w_logrank, type="l")
+#lines(czasy, w_gehan_breslow, type="l") 
+#lines(czasy, w_tarone_ware, type="l") 
+#lines(czasy, w_peto_peto, type="l") 
+
+
+
+plot(czasy, w_logrank_p, type="l", col="darkgreen")
+lines(czasy, w_gehan_breslow_p, type="l", col="lightblue") 
+lines(czasy, w_tarone_ware_p, type="l", col="lightcoral") 
+lines(czasy, w_peto_peto_p, type="l", col="darkblue") 
+legend("topright", legend = c("Log-Rank","Gehan-Breslow", "Tarone-Ware", "Peto-Peto"),
+       col = c("darkgreen","lightblue", "lightcoral", "darkblue"),lty = 1,lwd = 2)
+
+```
+
+Na wykresie powyżej widzimy, że test Log-Rank traktuje każde zdarzenie z jednakową wagą przez cały okres obserwacji. Pozostałe krzywe (Gehan-Breslow, Tarone-Ware, Peto-Peto) mają charakter malejący, co oznacza, że nadają one znacznie większe znaczenie ("wagę") zdarzeniom na początku badania, a marginalizują te, które wystąpiły w późniejszym czasie (gdzie linie opadają). Zestawiając to z wynikami p-value, można stwierdzić, że rzeczywiste różnice w przeżywalności między grupami ujawniają się dopiero w późnym etapie badania. Testy o malejących wagach "zignorowały" te późne różnice, przypisując im niską wartość wagową, podczas gdy test Log-Rank, utrzymując stałą wagę, skutecznie wykrył efekt końcowy. Potwierdza to występowanie zjawiska późnej separacji krzywych przeżycia. 
+
+Możemy również zauważyć, że test Tarone-Ware, który był na granicy przyjęcia hipotezy H0, dla późniejszych zdarzeń przyjmuje większe wagi niż pozostałe, natomias test z najwyższą wartością p - Gehan-Breslow, przyjmuje najniższe wagi dla późnych zdarzeń. 
