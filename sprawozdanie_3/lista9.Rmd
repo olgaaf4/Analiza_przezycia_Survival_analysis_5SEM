@@ -1,0 +1,114 @@
+---
+title: "Raport 3"
+author: "Olga Foriasz, Tomasz Warzecha"
+date: "2025-12-18"
+output:
+  pdf_document:
+    toc: true
+    fig_caption: true
+    fig_width: 5
+    fig_height: 4
+    number_sections: true
+  html_document:
+    toc: true
+    df_print: paged
+header-includes:
+- \usepackage[polish]{babel}
+- \usepackage[OT4]{polski}
+- \usepackage[T1]{fontenc}
+- \usepackage[utf8]{inputenc}
+- \usepackage{graphicx}
+- \usepackage{float}
+subtitle: Analiza przeżycia
+fontsize: 11pt
+---
+
+```{r setup, echo=FALSE, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE) 
+knitr::opts_chunk$set(fig.pos = "H", out.extra = "", fig.align = "center")
+library(knitr)
+library(kableExtra)
+library(dplyr)
+library(survival)
+```
+
+# Lista 9
+
+W zadaniu 9 wykorzystywane są dane lung z pakietu survival, dotyczące pacjentów z zaawansowanym rakiem płuc.
+
+## Zadanie 1 - Oszacowanie parametrów
+
+Najpierw oszacowano parametry przyspieszonego modelu awarii. Za zmienną zależną przyjęto zmienną time, natomiast za charakterystyki zmienne: age, sex, ph.ecog, ph.karno.
+
+```{r zadanie 9.1}
+data(lung)
+dane <- lung
+dane <- subset(dane, select = c(time, status, age, sex, ph.ecog, ph.karno))
+dane <- na.omit(dane)
+dane$age <- dane$age - mean(dane$age, na.rm = TRUE)
+dane$ph.karno <- dane$ph.karno - mean(dane$ph.karno, na.rm = TRUE)
+model <- survreg(Surv(time,status)~age+as.factor(sex)+as.factor(ph.ecog)+ph.karno, data=dane, dist = "weibull")
+beta <- model$coefficients[-1]
+mi <- model$icoef[1]
+sigma <- exp(model$icoef[2])
+odp <- c(beta,mi,sigma)
+#exp(mi)
+
+wyniki <- data.frame(Parametr = c(names(beta), "mi", "sigma"),
+                     Wartosc = c(beta, mi, sigma))
+
+kable(wyniki, caption = "Oszacowania parametrów modelu Weibulla",
+      digits = 4, row.names = FALSE)
+```
+
+Powyższa tabela przedstawia oszacowane parametry modelu. Pierwszych sześć wierszy zawiera oszacowania współczynników wektora $\beta$. Kolejny wiersz odpowiada parametrowi $\mu$, który określa bazowy logarytm czasu przeżycia. Ostatni wiersz zawiera parametr $\sigma$, opisujący zmienność czasu przeżycia w modelu.
+
+## Zadanie 2 - Interpretacja parametrów modelu
+
+* Współczynnik $\mu$ wynosi 6{,}04. Jest to parametr określający bazowy logarytm czasu przeżycia pacjenta, tj. przy założeniu, że zmienna age przyjmuje wartość równą średniej z danych, ph.ecog = 0, ph.karno jest równe swojej średniej w próbie oraz sex = 1 (mężczyzna).
+
+* Ponieważ $\mu = 6{,}04$, otrzymujemy $\log(T) = 6.04$. Po zastosowaniu funkcji wykładniczej uzyskujemy bazowy oczekiwany czas przeżycia pacjenta o „bazowych” parametrach, wyrażony w dniach. U nas wynosi on w przybliżeniu 421.
+
+* Następny parametr $\sigma$, kontrolujący zmienność czasu przeżycia, wynosi 0.75. Im większa jest wartość parametru, tym większe zróżnicowanie czasu przeżycia wśród badanych danych. Wartość 0.75 wskazuje zatem na niezbyt duże zróżnicowanie badanych danych.
+
+*  Parametr $\beta$ składa się z sześciu współczynników. Pierwszy – age = -0.86 – wskazuje, że wzrost wieku pacjenta powoduje skrócenie przewidywanego czasu przeżycia. Współczynnik as.factor(sex)2 wynosi 0.41 i oznacza, że pacjenci ze zmienną sex=2 (kobiety) mają większą oczekiwaną wartość funkcji przeżycia. Następnie współczynniki as.factor(ph.ecog)1, as.factor(ph.ecog)2 oraz as.factor(ph.ecog)3 są coraz niższe. Wskazuje to, że im większy wskaźnik ph.ecog (gdzie 0 oznacza sprawność prawidłową, a 5 – zgon), tym krótszy przewidywany czas przeżycia, co jest zgodne z intuicją. Ostatnim współczynnikiem $\beta$ jest ph.karno wynoszące -0.01. Wskazuje to, że lepsza sprawność fizyczna powoduje bardzo niewielki spadek przewidywanego czasu życia, co w praktyce prawdopodobnie nie odzwierciedla rzeczywistego wpływu sprawności fizycznej na długość życia.
+
+## Zadanie 3 - Oszacowanie funkcji przeżycia
+
+```{r zadanie 9.3}
+data(lung)
+dane <- lung
+z <- c(70-mean(dane$age, na.rm = TRUE),1,1,0,0,90-mean(dane$ph.karno, na.rm = TRUE))
+
+prawdopodobientwo <- function(dane, z, t, mi, sigma){
+  lambda <- exp(-mi/sigma)
+  alfa <- 1/sigma
+  suma=0
+  z<-na.omit(z)
+  for(i in 1:length(beta)){
+    suma=suma+beta[i]*z[i]
+  }
+  prawd <- exp(- lambda * exp(alfa * suma) * t^alfa)
+  return(prawd)
+}
+
+odp<-prawdopodobientwo(dane, z, 300, mi, sigma)
+```
+W zadaniu wyznaczono oszacowanie funkcji przeżycia, odpowiadającej rozkładowi czasu życia kobiety w wieku 70 lat, przy wartościach ph.karno=90 oraz ph.ecog=1, a następnie na jej podstawie obliczono prawdopodobieństwo, że badana kobieta przeżyje ponad 300 dni. Z wyliczeń wyszło, że to prawdopodobieństwo wynoi `r odp`.
+
+## Zadanie 4 - Wykres 
+
+Poniższy wykres przedstawia prawdopodobieństwo przeżycia t dni, dla t z przedziału [0,1500], przy parametrach jak w zdaniu 3.
+
+```{r zadanie 9.4, fig.width=5, fig.height=4}
+t <- seq(0,1500,0.1)
+
+plot(t, prawdopodobientwo(dane,z,t,mi,sigma), type = "l", ylim = c(0, 1), 
+     xlab = "t", ylab = "prawdopodobieństwo",
+     main = "Wykres dla różnych wartości t", lwd=1.5, col="darkblue")
+```
+
+
+
+
+
