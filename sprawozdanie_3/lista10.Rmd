@@ -1,0 +1,161 @@
+---
+title: "Raport 10"
+author: "Olga Foriasz, Tomasz Warzecha"
+date: "2025-12-18"
+output:
+  pdf_document:
+    toc: true
+    fig_caption: true
+    fig_width: 5
+    fig_height: 4
+    number_sections: true
+  html_document:
+    toc: true
+    df_print: paged
+header-includes:
+- \usepackage[polish]{babel}
+- \usepackage[OT4]{polski}
+- \usepackage[T1]{fontenc}
+- \usepackage[utf8]{inputenc}
+- \usepackage{graphicx}
+- \usepackage{float}
+subtitle: Analiza przeżycia
+fontsize: 11pt
+---
+
+```{r setup, echo=FALSE, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE) 
+knitr::opts_chunk$set(fig.pos = "H", out.extra = "", fig.align = "center")
+library(knitr)
+library(kableExtra)
+library(dplyr)
+library(survival)
+library(eha)
+```
+
+# Lista 10 
+
+Na liście 10 dalej wykorzystywane są dane użyte w zadanich na liście 9 - dotyczące pacjentów z zaawansowanym rakiem płuc.
+
+## Zadanie 1 - oszacowanie parametrów modelu proporcjonalnych hazardów Coxa
+
+W zadaniu 1 oszacowano parametry modelu proporcjonalnych hazardów Coxa, przyjmując za zmienną zależną zmienną time, a za charakterystyki zmienne:
+age, sex, ph.ecog, ph.karno.
+
+```{r 10.1 przygotowanie danych , echo=FALSE}
+
+data(lung)
+dane <- lung
+dane <- subset(dane, select = c(time, status, age, sex, ph.ecog, ph.karno))
+dane <- na.omit(dane)
+age.mean <- mean(dane$age, na.rm = TRUE)
+ph.karno.mean <- mean(dane$ph.karno, na.rm = TRUE)
+dane$age <- dane$age - mean(dane$age, na.rm = TRUE)
+dane$ph.karno <- dane$ph.karno - mean(dane$ph.karno, na.rm = TRUE)
+
+```
+
+```{r 10.1, echo=FALSE}
+
+fit_cox <- coxph(Surv(time,status)~as.factor(ph.ecog)+ph.karno+age+as.factor(sex), data=dane)
+
+beta_cox <- fit_cox$coefficients
+#beta_cox
+
+wyniki <- data.frame(Parametr = c(names(beta_cox)),
+                     Wartosc = c(beta_cox))
+
+kable(wyniki, caption = "Oszacowania parametrów ph Coxa",
+      digits = 4, row.names = FALSE)
+
+```
+
+
+## Zadanie 2 - Interpretacja współczynników
+
+Patrząc na wyniki modelu Coxa, można zaobserwowaać, że wyższe wartości ph.ecog oznaczają większe ryzyko zgonu. Im wyższy poziom (szczególnie ph.ecog = 3), tym hazard jest większy, czyli przeżycie jest krótsze w porównaniu z grupą referencyjną.
+
+Dla zmiennych age i ph.karno współczynniki są dodatnie, co oznacza, że starszy wiek i wyższe wartości ph.karno (czyli gorszy stan funkcjonalny) nieznacznie zwiększają ryzyko zgonu, ale efekt jest dość mały.
+
+Natomiast dla płci (sex = 2) współczynnik jest ujemny, co pokazuje, że osoby w tej grupie mają niższe ryzyko zgonu i większe szanse na przeżycie w porównaniu z grupą referencyjną.
+
+Podsumowując, najważniejszym czynnikiem wpływającym na przeżycie jest stan ogólny pacjenta. Mierzony ph.ecog, wiek i płeć mają mniejszy, ale też zauważalny wpływ.
+
+## Zadanie 3 - Oszacowanie bazowej skumulowanej funkcji hazardu i bazowej funkcji przeżycia
+
+```{r 10.3, echo=FALSE}
+bh<- basehaz(fit_cox, centered = T)
+
+x<- bh$time
+y<-bh$hazard
+y1<-exp(-bh$hazard)
+
+plot(x,y, main="Skumulowana funkcja hazardu", col="darkblue", ylab="prawdopodobieństwo", xlab="czas")
+plot(x,y1, main="Funkcja przeżycia", col="darkblue", xlab="czas", ylab="sk.funkcja hazardu")
+```
+
+## Zadanie 4 - Oszacowanie wartości skumulowanej funkcji hazardu
+
+Dla kobiety w wieku 70 lat o charakterystyce ph.ecog=1 i ph.karno=90 wyznaczono oszacowanie wartości skumulowanej funkcji przeżycia. Oszacowanie znajduje się na wykresie poniżej oraz dodatkowo narysowano logarytm funkcji. 
+
+```{r 10.4a, echo = FALSE}
+base_surv<- stepfun(bh$time, c(1,exp(-bh$hazard)))
+t=seq(0,1000,1)
+base_1<-base_surv(t)
+
+z1<- c(1,0,0,90-ph.karno.mean, 70-age.mean, 1)
+Sz1<-(base_1)^(exp(sum(beta_cox*z1)))
+Hz1<- -log(Sz1)
+plot(t,Hz1, type="l", lwd=1, xlab="czas", ylab="skumulowana f.hazardu",main="Wykres dla skumulowanej f.hazardu" )
+
+plot(t,log(Hz1), type="l", lwd=1, xlab="czas", ylab="skumulowana f.hazardu", main="Wykres dla logarytmu skumulowanej f.hazardu")
+```
+Następnie to samo zrobiono dla kobiety w wieku 70 lat o charakterystyce ph.ecog=2 i ph.karno=90. Narysowano wykres skumulowanej funkcji hazardu oraz logarytmu funkcji.
+
+```{r 10.4b, echo = FALSE}
+z2<- c(0,1,0,90-ph.karno.mean, 70-age.mean, 1)
+Sz2<-(base_1)^(exp(sum(beta_cox*z2)))
+Hz2<- -log(Sz2)
+plot(t,Hz2, type="l", lwd=1, xlab="czas", ylab="skumulowana f.hazardu" , main="Wykres dla skumulowanej f.hazardu")
+
+plot(t,log(Hz2), type="l", lwd=1, xlab="czas", ylab="logarytm skumulowanej f.hazardu", main="Wykres dla logarytmu skumulowanej f.hazardu")
+```
+
+Wykresy logarytmów skumulowanych funkcji hazardu dla obu grup są do siebie prawie równoległe, co widać zwłaszcza przy uwzględnieniu różnej skali. Oznacza to, że założenie proporcjonalnych hazardów w modelu Coxa jest spełnione i nie powinniśmy mieć wątpliwości co do poprawności modelu.
+
+## Zadanie 5 - Oszacowanie funkcji przeżycia
+
+```{r 10.5a, echo=FALSE}
+
+base_300<- base_surv(300)
+Sz1_300<- base_300^(exp(sum(beta_cox*z1)))
+
+Sz2_300<- base_300^(exp(sum(beta_cox*z2)))
+
+Sz1_300
+Sz2_300
+```
+W zadaniu 5 na początku wyznaczono oszacowanie funkcji przeżycia dla kobiety w wieku 70 lat o charakterystyce ph.ecog=1 i ph.karno=90. Oszacowane prawdopodobieństwo, że przeżyje ona ponad 300 dni wynosiło `r Sz1_300`. Wynik otrzymany w zadniu 5 jest bardzo zbliżony do wyników w zadaniu 3. oraz 8. na liście 9. Poprzednio oszacowanie wynosiło ok. 0.57 oraz 0.58.
+
+Dla kobiety natomiast w wieku 70 lat o charakterystyce ph.ecog=2 i ph.karno=90 prawdopodobieństwo wyniosło znacznie mniej, tzn. `r Sz2_300`.
+
+
+## Zadanie 6 - Wykres dla funkcji przeżycia
+
+W zadaniu narysowanoc oszacowanie funkcji przeżycia dla kobiety w wieku 70 lat o charakterystyce ph.ecog=1 i ph.karno=90.
+
+```{r 10.6, echo=FALSE}
+
+base_surv<- stepfun(bh$time, c(1,exp(-bh$hazard)))
+t=seq(0,1500,1)
+base_1<-base_surv(t)
+
+z1<- c(1,0,0,90-ph.karno.mean, 70-age.mean, 1)
+Sz1<-(base_1)^(exp(sum(beta_cox*z1)))
+
+plot(t, Sz1, type="l", lwd=1.5, xlab="czas", ylab="prawdopodobieństwo", main="Wykres dla funkcji przeżycia", col="darkblue")
+
+```
+Wykres ma kształt podobny do tego z zadania 9 na liście 9, jednak tam jest bardziej gładki i ciągły, a tu pojawiają się liczne schodki. Różnica wynika z metody estymacji funkcji bazowej, ale ogólny trend przeżywalności pozostaje taki sam.
+
+
