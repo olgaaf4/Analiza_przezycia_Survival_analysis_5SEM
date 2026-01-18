@@ -90,8 +90,8 @@ x<- bh$time
 y<-bh$hazard
 y1<-exp(-bh$hazard)
 
-plot(x,y, main="Skumulowana funkcja hazardu", col="darkblue", ylab="prawdopodobieństwo", xlab="czas")
-plot(x,y1, main="Funkcja przeżycia", col="darkblue", xlab="czas", ylab="sk.funkcja hazardu")
+plot(x,y, main="Skumulowana funkcja hazardu", col="darkblue", ylab="prawdopodobieństwo", xlab="czas", type="l", lwd=1.5)
+plot(x,y1, main="Funkcja przeżycia", col="darkblue", xlab="czas", ylab="sk.funkcja hazardu", type="l", lwd=1.5)
 ```
 
 ## Zadanie 4 - Oszacowanie wartości skumulowanej funkcji hazardu
@@ -106,9 +106,9 @@ base_1<-base_surv(t)
 z1<- c(1,0,0,90-ph.karno.mean, 70-age.mean, 1)
 Sz1<-(base_1)^(exp(sum(beta_cox*z1)))
 Hz1<- -log(Sz1)
-plot(t,Hz1, type="l", lwd=1, xlab="czas", ylab="skumulowana f.hazardu",main="Wykres dla skumulowanej f.hazardu" )
+plot(t,Hz1, type="l", lwd=1, xlab="czas", ylab="skumulowana f.hazardu",main="Wykres dla skumulowanej f.hazardu", col="darkblue" )
 
-plot(t,log(Hz1), type="l", lwd=1, xlab="czas", ylab="skumulowana f.hazardu", main="Wykres dla logarytmu skumulowanej f.hazardu")
+plot(t,log(Hz1), type="l", lwd=1, xlab="czas", ylab="skumulowana f.hazardu", main="Wykres dla logarytmu skumulowanej f.hazardu",  col="darkblue")
 ```
 Następnie to samo zrobiono dla kobiety w wieku 70 lat o charakterystyce ph.ecog=2 i ph.karno=90. Narysowano wykres skumulowanej funkcji hazardu oraz logarytmu funkcji.
 
@@ -116,9 +116,9 @@ Następnie to samo zrobiono dla kobiety w wieku 70 lat o charakterystyce ph.ecog
 z2<- c(0,1,0,90-ph.karno.mean, 70-age.mean, 1)
 Sz2<-(base_1)^(exp(sum(beta_cox*z2)))
 Hz2<- -log(Sz2)
-plot(t,Hz2, type="l", lwd=1, xlab="czas", ylab="skumulowana f.hazardu" , main="Wykres dla skumulowanej f.hazardu")
+plot(t,Hz2, type="l", lwd=1.5, xlab="czas", ylab="skumulowana f.hazardu" , main="Wykres dla skumulowanej f.hazardu", col="darkblue")
 
-plot(t,log(Hz2), type="l", lwd=1, xlab="czas", ylab="logarytm skumulowanej f.hazardu", main="Wykres dla logarytmu skumulowanej f.hazardu")
+plot(t,log(Hz2), type="l", lwd=1.5, xlab="czas", ylab="logarytm skumulowanej f.hazardu", main="Wykres dla logarytmu skumulowanej f.hazardu",  col="darkblue")
 ```
 
 Wykresy logarytmów skumulowanych funkcji hazardu dla obu grup są do siebie prawie równoległe, co widać zwłaszcza przy uwzględnieniu różnej skali. Oznacza to, że założenie proporcjonalnych hazardów w modelu Coxa jest spełnione i nie powinniśmy mieć wątpliwości co do poprawności modelu.
@@ -132,8 +132,8 @@ Sz1_300<- base_300^(exp(sum(beta_cox*z1)))
 
 Sz2_300<- base_300^(exp(sum(beta_cox*z2)))
 
-Sz1_300
-Sz2_300
+#Sz1_300
+#Sz2_300
 ```
 W zadaniu 5 na początku wyznaczono oszacowanie funkcji przeżycia dla kobiety w wieku 70 lat o charakterystyce ph.ecog=1 i ph.karno=90. Oszacowane prawdopodobieństwo, że przeżyje ona ponad 300 dni wynosiło `r Sz1_300`. Wynik otrzymany w zadniu 5 jest bardzo zbliżony do wyników w zadaniu 3. oraz 8. na liście 9. Poprzednio oszacowanie wynosiło ok. 0.57 oraz 0.58.
 
@@ -157,5 +157,3 @@ plot(t, Sz1, type="l", lwd=1.5, xlab="czas", ylab="prawdopodobieństwo", main="W
 
 ```
 Wykres ma kształt podobny do tego z zadania 9 na liście 9, jednak tam jest bardziej gładki i ciągły, a tu pojawiają się liczne schodki. Różnica wynika z metody estymacji funkcji bazowej, ale ogólny trend przeżywalności pozostaje taki sam.
-
-
