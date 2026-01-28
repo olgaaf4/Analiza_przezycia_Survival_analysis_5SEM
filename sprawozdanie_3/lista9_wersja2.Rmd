@@ -1,0 +1,273 @@
+---
+title: "Raport 3"
+author: "Olga Foriasz, Tomasz Warzecha"
+date: "2025-12-18"
+output:
+  pdf_document:
+    toc: true
+    fig_caption: true
+    fig_width: 5
+    fig_height: 4
+    number_sections: true
+  html_document:
+    toc: true
+    df_print: paged
+header-includes:
+- \usepackage[polish]{babel}
+- \usepackage[OT4]{polski}
+- \usepackage[T1]{fontenc}
+- \usepackage[utf8]{inputenc}
+- \usepackage{graphicx}
+- \usepackage{float}
+subtitle: Analiza przeżycia
+fontsize: 11pt
+---
+
+```{r setup, echo=FALSE, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE) 
+knitr::opts_chunk$set(fig.pos = "H", out.extra = "", fig.align = "center")
+library(knitr)
+library(kableExtra)
+library(dplyr)
+library(survival)
+library(eha)
+```
+
+# Lista 9
+
+Na liście 9 wykorzystywane są dane lung z pakietu survival, dotyczące pacjentów z zaawansowanym rakiem płuc.
+
+## Zadanie 1 - Oszacowanie parametrów
+
+Najpierw oszacowano parametry przyspieszonego modelu awarii. Za zmienną zależną przyjęto zmienną time, natomiast za charakterystyki zmienne: age, sex, ph.ecog, ph.karno.
+
+```{r zadanie 9.1}
+data(lung)
+dane <- lung
+dane <- subset(dane, select = c(time, status, age, sex, ph.ecog, ph.karno))
+dane <- na.omit(dane)
+age.mean <- mean(dane$age, na.rm = TRUE)
+ph.karno.mean <- mean(dane$ph.karno, na.rm = TRUE)
+dane$age <- dane$age - mean(dane$age, na.rm = TRUE)
+dane$ph.karno <- dane$ph.karno - mean(dane$ph.karno, na.rm = TRUE)
+model <- survreg(Surv(time,status)~age+as.factor(sex)+as.factor(ph.ecog)+ph.karno, data=dane, dist = "weibull")
+
+beta <- model$coefficients[-1]
+mi <- model$coefficients[1]
+sigma <- exp(model$icoef[2])
+odp <- c(beta,mi,sigma)
+log(mi)
+
+wyniki <- data.frame(Parametr = c(names(beta), "mi", "sigma"),
+                     Wartosc = c(beta, mi, sigma))
+
+kable(wyniki, caption = "Oszacowania parametrów modelu Weibulla",
+      digits = 4, row.names = FALSE)
+```
+
+Powyższa tabela przedstawia oszacowane parametry modelu. Pierwszych sześć wierszy zawiera oszacowania współczynników wektora $\beta$. Kolejny wiersz odpowiada parametrowi $\mu$, który określa bazowy logarytm czasu przeżycia. Ostatni wiersz zawiera parametr $\sigma$, opisujący zmienność czasu przeżycia w modelu.
+
+## Zadanie 2 - Interpretacja parametrów modelu
+
+* Współczynnik $\mu$ wynosi 6{,}30. Jest to parametr określający bazowy logarytm czasu przeżycia pacjenta, tj. przy założeniu, że zmienna age przyjmuje wartość równą średniej z danych, ph.ecog = 0, ph.karno jest równe swojej średniej w próbie oraz sex = 1 (mężczyzna).
+
+* Ponieważ $\mu = 6{,}30$. Po zastosowaniu funkcji wykładniczej uzyskujemy bazowy oczekiwany czas przeżycia pacjenta o „bazowych” parametrach, wyrażony w dniach. U nas wynosi on w przybliżeniu 545.
+
+* Następny parametr $\sigma$, kontrolujący zmienność czasu przeżycia, wynosi 0.75. Im większa jest wartość parametru, tym większe zróżnicowanie czasu przeżycia wśród badanych danych. Wartość 0.75 wskazuje zatem na niezbyt duże zróżnicowanie badanych danych.
+
+*  Parametr $\beta$ składa się z sześciu współczynników. Pierwszy - age = -0.0086 – wskazuje, że wzrost wieku pacjenta powoduje skrócenie przewidywanego czasu przeżycia. Współczynnik as.factor(sex)2 wynosi 0.41 i oznacza, że pacjenci ze zmienną sex=2 (kobiety) mają większą oczekiwaną wartość funkcji przeżycia. Następnie współczynniki as.factor(ph.ecog)1, as.factor(ph.ecog)2 oraz as.factor(ph.ecog)3 są coraz niższe. Wskazuje to, że im większy wskaźnik ph.ecog (gdzie 0 oznacza sprawność prawidłową, a 5 – zgon), tym krótszy przewidywany czas przeżycia, co jest zgodne z intuicją. Ostatnim współczynnikiem $\beta$ jest ph.karno wynoszące -0.01. Wskazuje to, że lepsza sprawność fizyczna powoduje bardzo niewielki spadek przewidywanego czasu życia, co w praktyce prawdopodobnie nie odzwierciedla rzeczywistego wpływu sprawności fizycznej na długość życia.
+
+## Zadanie 3 - Oszacowanie funkcji przeżycia
+
+```{r zadanie 9.3}
+data(lung)
+dane <- lung
+z <- c(70-mean(dane$age, na.rm = TRUE),1,1,0,0,90-mean(dane$ph.karno, na.rm = TRUE))
+
+prawdopodobientwo <- function(dane, z, t, mi, sigma){
+  lambda <- exp(-mi/sigma)
+  alfa <- 1/sigma
+  suma=0
+  z<-na.omit(z)
+  for(i in 1:length(beta)){
+    suma=suma+beta[i]*z[i]
+  }
+  prawd <- exp(-lambda * exp(-alfa * suma) * t^alfa)
+  return(prawd)
+}
+
+odp<-prawdopodobientwo(dane, z, 300, mi, sigma)
+odp
+```
+W zadaniu wyznaczono oszacowanie funkcji przeżycia, odpowiadającej rozkładowi czasu życia kobiety w wieku 70 lat, przy wartościach ph.karno=90 oraz ph.ecog=1, a następnie na jej podstawie obliczono prawdopodobieństwo, że badana kobieta przeżyje ponad 300 dni. Z wyliczeń wyszło, że to prawdopodobieństwo wynoi `r odp`.
+
+## Zadanie 4 - Wykres 
+
+Poniższy wykres przedstawia prawdopodobieństwo przeżycia t dni, dla t z przedziału [0,1500], przy parametrach jak w zdaniu 3.
+
+```{r zadanie 9.4, fig.width=5, fig.height=4}
+data(lung)
+dane <- lung
+
+t <- seq(0,1500,0.1)
+
+plot(t, prawdopodobientwo(dane,z,t,mi,sigma), type = "l", ylim = c(0, 1), 
+     xlab = "t", ylab = "prawdopodobieństwo",
+     main = "Wykres dla różnych wartości t", lwd=1, col="darkblue")
+```
+
+## Zadanie 5 - Oszacowanie parametry modelu proporcjonalnych hazardów
+
+W zadaniu oszacowano parametry modelu proporcjonalnych hazardów, przyjmując za zmienną zależną zmienną time, a za charakterystyki zmienne: age, sex, ph.ecog, ph.karno.
+
+```{r zadanie 9.5}
+data(lung)
+dane <- lung
+dane <- subset(dane, select = c(time, status, age, sex, ph.ecog, ph.karno))
+dane <- na.omit(dane)
+age.mean <- mean(dane$age, na.rm = TRUE)
+ph.karno.mean <- mean(dane$ph.karno, na.rm = TRUE)
+dane$age <- dane$age - mean(dane$age, na.rm = TRUE)
+dane$ph.karno <- dane$ph.karno - mean(dane$ph.karno, na.rm = TRUE)
+
+model <- phreg(Surv(time,status)~age+as.factor(sex)+as.factor(ph.ecog)+ph.karno,data=dane, dist = "weibull" )
+
+beta<-model$coefficients[1:6]
+mi <- model$coefficients["log(scale)"]
+sigma<- exp(model$coefficients["log(shape)"])
+
+wyniki <- data.frame(Parametr = c(names(beta), "mi", "sigma"),
+                     Wartosc = c(beta, mi, sigma))
+
+kable(wyniki, caption = "Oszacowania parametrów modelu Weibulla",
+      digits = 4, row.names = FALSE)
+```
+Powyższa tabela przedstawia oszacowane parametry modelu. Pierwszych sześć wierszy zawiera oszacowania współczynników wektora $\beta$. Kolejny wiersz odpowiada parametrowi $\mu$, który określa bazowy logarytm czasu przeżycia. Ostatni wiersz zawiera parametr $\sigma$, opisujący zmienność czasu przeżycia w modelu.
+
+## Zadanie 6 - Interpretacja współczynników modelu
+
+Oszacowane parametry modelu Weibulla zostały uzyskane metodą największej wiarygodności i odnoszą się do modelu liniowego logarytmu czasu przeżycia (AFT). 
+
+* Parametr $\mu$=6,30 opisuje bazowy logarytm czasu przeżycia pacjenta o wartościach referencyjnych zmiennych objaśniających.Oznacza to, że dla pacjenta z grupy referencyjnej (mężczyzny, o najlepszej sprawności według skali ph.ecog oraz przy wartościach referencyjnych pozostałych zmiennych) model przewiduje przeciętny czas przeżycia wynoszący około 2129 dni, gdzie dodatkowo w zależności od pozostałych cech, szacowany czas może się wydłużyć lub skrócić. wydłużeniu.
+
+* Parametr $\sigma$=1,3876 kontroluje zmienność czasu przeżycia i wskazuje na dość duże zróżnicowanie obserwowanych czasów przeżycia w badanej populacji. 
+
+* Wzrost wieku pacjenta nieznacznie wydłuża przewidywany czas przeżycia (age=0,0119). 
+
+* Ujemny współczynnik natomiast dla zmiennej sex=2 (dla kobiet) , wynoszący- 0,5665 oznacza, że kobiety mają krótszy oczekiwany czas przeżycia niż grupa referencyjna (mężczyźni).
+
+* Współczynniki przy zmiennej ph.ecog rosną wraz z jej poziomem, co wskazuje, że pogarszająca się sprawność chorego znacznie skraca przewidywany czas przeżycia. 
+
+* Zmienna ph.karno ma bardzo niewielki dodatni wpływ na czas przeżycia (0,0140), co sugeruje słaby wpływ tej zmiennej w obecnym modelu.
+
+
+## Zadanie 7 - Oszacowanie funkcji hazardu
+
+Dla kobiety w wieku 70 lat o charakterystyce ph.ecog=1 i ph.karno=90 oszacowanie funkcji hazardu wyniosło 0.00271.
+
+```{r zadanie 9.7a}
+data(lung)
+dane <- lung
+z1 <- c(70-age.mean,1,1,0,0,90-ph.karno.mean)
+
+f_hazardu <- function(t,mi,sigma,beta,z){
+  alfa<-sigma
+  lambda<- exp(-mi*sigma)
+  wynik<-lambda*alfa*t^(alfa-1)*exp(sum(beta*z))
+  return(wynik)
+}
+
+#f_hazardu(365,mi,sigma,beta,z1)
+
+t <- seq(0,100,0.1)
+
+plot(t, f_hazardu(t,mi,sigma,beta,z1), type = "l", lwd = 1 col = "darkblue", xlab = "czas t",ylab = "hazard", main = "Funkcja hazardu Weibulla")
+
+plot(t, log(f_hazardu(t,mi,sigma,beta,z1)), type = "l", lwd = 1, col = "darkblue", xlab = "czas t",ylab = "logarytm hazardu", main = "Wykres logarytmu funkcji hazardu Weibulla - pierwsze 100 dni")
+
+t<- seq(69*365,70*365,0.1)
+
+plot(t, log(f_hazardu(t,mi,sigma,beta,z1)), type = "l", lwd = 1, col = "darkblue", xlab = "czas t",ylab = "logarytm hazardu", main = "Wykres logarytmu funkcji hazardu Weibulla - ostatni rok życia pacjentki")
+
+```
+Dla kobiety w wieku 70 lat o charakterystyce ph.ecog=2 i ph.karno=90 oszacowanie funkcji hazardu wyniosło 0.00546.
+
+```{r zadanie 9.7b}
+z2<- c(70-age.mean,1,0,1,0,90-ph.karno.mean)
+#f_hazardu(365,mi,sigma,beta,z2)
+
+t <- seq(0,100,0.1)
+
+plot(t, f_hazardu(t,mi,sigma,beta,z2), type = "l", lwd = 1.5, col = "darkblue", xlab = "czas t",ylab = "hazard", main = "Funkcja hazardu Weibulla")
+
+plot(t, log(f_hazardu(t,mi,sigma,beta,z2)), type = "l", lwd = 1.5, col = "darkblue", xlab = "czas t",ylab = "logarytm hazardu", main = "Wykres logarytmu funkcji hazardu Weibulla - pierwsze 100 dni")
+
+t<- seq(69*365,70*365,0.1)
+
+plot(t, log(f_hazardu(t,mi,sigma,beta,z2)), type = "l", lwd = 1.5, col = "darkblue", xlab = "czas t",ylab = "logarytm hazardu", main = "Wykres logarytmu funkcji hazardu Weibulla - ostatni rok życia pacjentki")
+```
+Na przyjętym przedziale czasowym dla t od 0 do 100 wykresy logarytmm hazardów nie są liniowe. Aby nie mieć wątpliowści co do przyjętego modelu proporcjonalnych hazardów, oczekiwalibyśmy, że wykresy będą prawie liniowe oraz wykresy logarytmów będą do siebie równoległe. Jak wcześniej napisano, nie są to wykresy liniowe na zadanym przedziale, zatem można mieć wątpliowści co do przyjętego modelu. 
+
+Jeśli natomiast ustalimy t - zmienną czasu, tylko na ostatni rok życia pacjentek, to wykresu logarytmów funkcji hazardów są liniowe oraz można uznać, że równoległe do siebie. Na takim przedziale czasowym nie powinno się mieć wątpliwości co do przyjętego modelu.
+
+Stąd można wysnuć wnioski, że na pełnym przedziale czasowym od 0 do 70 lat, można mieć wątpliwości co do przyjętego modelu, jednak biorać krótszy przedział, np. ostatni rok życia, można uznać przyjęty model za akceptowalny.
+
+## Zadanie 8 - Oszacowanie funkcji przeżycia
+
+Dla kobiety w wieku 70 lat o charakterystyce ph.ecog=1 i ph.karno=90 oszacowane prawdopodobieństwo, że czas życia będzie większy niż 300 dni, wynosi 0,58. W zadaniu 3, przy wcześniejszej metodzie obliczeń, prawdopodobieństwo to wynosiło 0,58, czyli wynik bardzo porównywalny do wyniku w zadaniu 3. Różnica mogła być spowodowana zastosowaniem w zadaniu 3 z modelu AFT (log-czas), a tu: modelu proporcjonalnych hazardów (hazard), co daje nieznacznie inne prawdopodobieństwo przeżycia.
+
+```{r zadanie 9.8a}
+
+data(lung)
+dane <- lung
+
+z1 <- c(70-age.mean,1,1,0,0,90-ph.karno.mean)
+dane <- subset(dane, select = c(time, status, age, sex, ph.ecog, ph.karno))
+dane <- na.omit(dane)
+age.mean <- mean(dane$age, na.rm = TRUE)
+ph.karno.mean <- mean(dane$ph.karno, na.rm = TRUE)
+dane$age <- dane$age - mean(dane$age, na.rm = TRUE)
+dane$ph.karno <- dane$ph.karno - mean(dane$ph.karno, na.rm = TRUE)
+model <- phreg(Surv(time,status)~age+as.factor(sex)+as.factor(ph.ecog)+ph.karno,data=dane, dist = "weibull" )
+
+beta<-model$coefficients[1:6]
+mi <- model$coefficients["log(scale)"]
+sigma<- exp(model$coefficients["log(shape)"])
+f_przezycia <- function(t,mi,sigma,beta,z){
+  alfa<- sigma
+  lambda<- exp(-mi*sigma)
+  wynik<- exp(-lambda * t^alfa * exp(sum(beta*z)))
+  return(wynik)
+}
+
+f_przezycia(300,mi,sigma,beta,z1)
+
+```
+Dla kobiety w wieku 70 lat o charakterystyce ph.ecog=2 i ph.karno=90 szacowane prawdopodobieństwo, że czas życia będzie większy niż 300 dni wynosi 0.33.
+
+```{r zadanie 9.8b}
+z2 <- c(70-age.mean,1,0,1,0,90-ph.karno.mean)
+
+model <- phreg(Surv(time,status)~age+as.factor(sex)+as.factor(ph.ecog)+ph.karno,data=dane, dist = "weibull" )
+
+beta<-model$coefficients[1:6]
+mi <- model$coefficients["log(scale)"]
+sigma<- exp(model$coefficients["log(shape)"])
+
+f_przezycia(300,mi,sigma,beta,z2)
+```
+
+## Zadanie 9 - Wykresy oszacowanych funkcji przeżycia
+
+Poniższy wykres przedstawia oszacowanie funkcji przeżycia odpowiadającej rozkładowi czasu życia kobiety w wieku 70 lat o charakterystyce ph.ecog=1 i ph.karno=90.
+
+```{r zadanie 9.9}
+data(lung)
+dane <- lung
+t <- seq(0,1500,0.1)
+
+plot(t, f_przezycia(t,mi,sigma,beta,z1), type = "l", lwd = 1.5, col = "darkblue", xlab = "czas t",ylab = "funkcja przeżycia", main = "Funkcja przeżycia")
+
+```
+
+Porównując wyniki z obecnego oszacowania funkcji przeżycia z wykresem z zadania 4, gdzie również liczono funkcję przeżycia (w dniach) dla kobiety o tej samej charakterystyce, można zauważyć, że nowa funkcja przeżycia spada znacznie łagodniej. Spadek prawdopodobieństwa jest stopniowy, podczas gdy w funkcji z zadania 4 spadek był gwałtowny i niemal od razu zbliżał się do zera. Obecnie funkcja przeżycia osiąga wartość bliską 0 dopiero w okolicach 1500 dni, natomiast w zadaniu 4 wartość ta była osiągana już około 500 dnia.
